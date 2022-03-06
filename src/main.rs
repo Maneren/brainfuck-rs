@@ -4,18 +4,41 @@
 
 use std::collections::VecDeque;
 use std::io::Read;
+use std::fs;
+use std::env;
+use std::path::PathBuf;
+use std::process::exit;
+
+use clap::Parser;
+
 use crate::parser::Op;
 
 mod parser;
 
+#[derive(Parser)]
+#[clap(author, version, about)]
+struct Cli {
+
+    /// The brainfuck program file
+    file: PathBuf,
+
+    /// Memory size in kB (kilobytes). The default is set to 1kB.
+    #[clap(short, long)]
+    memory_size: Option<usize>,
+}
+
 fn main() {
+    let args: Cli = Cli::parse();
+
+    let program = fs::read_to_string(args.file)
+        .expect("Couldn't read from file!");
+
     let mut stk = VecDeque::<usize>::new();
 
-    let mut mem = vec![0u8; u16::MAX as usize];
+    let mut mem = vec![0u8; args.memory_size.unwrap_or(1) * 1024];
     let mut ptr = 0usize;
 
-    let program = "-[------->+<]>-.-[->+++++<]>++.+++++++..+++.[->+++++<]>+.------------.---[->+++<]>.-[--->+<]>---.+++.------.--------.-[--->+<]>.";
-    let parsed = parser::parse(program.to_owned());
+    let parsed = parser::parse(program);
     let mut parsed_index = 0usize;
 
     let mut stdin_iterator = std::io::stdin().bytes();
@@ -38,6 +61,5 @@ fn main() {
         } else { break; }
     }
 }
-
 
 
