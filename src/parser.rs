@@ -6,8 +6,8 @@ pub enum Op {
   Left(usize),
   Print,
   Read,
-  BlockStart,
-  BlockStop,
+  JumpIfZero(usize),
+  JumpIfNonZero(usize),
   Invalid,
 }
 
@@ -30,8 +30,8 @@ pub fn parse(string: &str) -> Vec<Op> {
       '<' => Op::Left(load_multiple(&chars, &mut index) as usize),
       '.' => Op::Print,
       ',' => Op::Read,
-      '[' => Op::BlockStart,
-      ']' => Op::BlockStop,
+      '[' => Op::JumpIfZero(0),
+      ']' => Op::JumpIfNonZero(0),
       _ => Op::Invalid,
     };
 

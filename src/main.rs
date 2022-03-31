@@ -6,8 +6,8 @@
 mod memory;
 mod parser;
 
+use std::fs;
 use std::path::PathBuf;
-use std::{collections::HashMap, fs};
 use std::{io::Read, time::Instant};
 
 use clap::Parser;
@@ -32,18 +32,18 @@ fn main() {
   let program = fs::read_to_string(args.file).expect("Couldn't read from file!");
 
   let start = Instant::now();
-  let parsed = parser::parse(&program);
-  let jump_table = create_jump_table(&parsed);
+  let mut parsed = parser::parse(&program);
+  link_jumps(&mut parsed);
   let mut memory = create_memory(args.memory_size);
 
-  let ops = run(&mut memory, &parsed, &jump_table);
+  let ops = run(&mut memory, &parsed);
 
   let elapsed = start.elapsed();
-  let ops_per_second = ops as f64 / elapsed.as_secs_f64();
-  println!("\nExecuted in {elapsed:?} ({ops_per_second:.0} ops/s)");
+  let ops_per_second = ops as f64 / elapsed.as_secs_f64() / 1_000_000_f64;
+  println!("\nExecuted in {elapsed:?} ({ops_per_second:.2}M ops/s)");
 }
 
-fn run(memory: &mut Memory, parsed: &[Op], jump_table: &HashMap<usize, usize>) -> u64 {
+fn run(memory: &mut Memory, parsed: &[Op]) -> u64 {
   let mut stdin = std::io::stdin().bytes();
   let mut parsed_index = 0usize;
   let mut counter = 0;
@@ -56,14 +56,14 @@ fn run(memory: &mut Memory, parsed: &[Op], jump_table: &HashMap<usize, usize>) -
       Op::Left(count) => memory.left(*count),
       Op::Print => print!("{}", memory.get() as char),
       Op::Read => memory.set(stdin.next().unwrap_or(Ok(0)).unwrap_or_default()),
-      Op::BlockStart => {
+      Op::JumpIfZero(target) => {
         if memory.get() == 0 {
-          parsed_index = jump_table[&parsed_index];
+          parsed_index = *target;
         }
       }
-      Op::BlockStop => {
+      Op::JumpIfNonZero(target) => {
         if memory.get() != 0 {
-          parsed_index = jump_table[&parsed_index];
+          parsed_index = *target;
         }
       }
       Op::Invalid => unreachable!(),
@@ -99,23 +99,27 @@ fn create_memory(memory_size: Option<String>) -> Memory {
   }
 }
 
-fn create_jump_table(input: &[Op]) -> HashMap<usize, usize> {
-  let mut jump_table = HashMap::new();
-  let mut left_positions = vec![];
+fn link_jumps(input: &mut [Op]) {
+  let mut left_indexes = Vec::new();
 
-  for (position, operator) in input.iter().enumerate() {
-    match operator {
-      Op::BlockStart => left_positions.push(position),
+  for i in 0..input.len() {
+    match input[i] {
+      Op::JumpIfZero(..) => left_indexes.push(i),
 
-      Op::BlockStop => {
-        let left = left_positions.pop().unwrap();
-        let right = position;
-        jump_table.insert(left, right);
-        jump_table.insert(right, left);
+      Op::JumpIfNonZero(..) => {
+        let left = match left_indexes.pop() {
+          Some(left) => left,
+          None => panic!("Unmatched closing bracket!"),
+        };
+
+        let right = i;
+
+        input[left] = Op::JumpIfZero(right);
+        input[right] = Op::JumpIfNonZero(left);
       }
       _ => {}
     }
   }
 
-  jump_table
+  assert!(left_indexes.is_empty(), "Unmatched opening bracket!");
 }
