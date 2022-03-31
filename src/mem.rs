@@ -1,7 +1,7 @@
 
 use std::ops::{Index, IndexMut};
 
-type MemoryData = [u8; u16::MAX as usize];
+type MemoryData = Vec<u8>;
 
 #[derive(Debug)]
 pub struct Memory {
@@ -9,8 +9,8 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new() -> Self {
-        Memory { data: [0; u16::MAX as usize] }
+    pub fn new(size: usize) -> Self {
+        Memory { data: vec![0; size * 1024] }
     }
 }
 
