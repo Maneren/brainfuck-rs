@@ -1,5 +1,5 @@
 #[derive(Debug, PartialEq, Eq)]
-pub enum Op {
+pub enum Instruction {
   Increment(u8),
   Decrement(u8),
   Right(usize),
@@ -8,15 +8,9 @@ pub enum Op {
   Read,
   JumpIfZero(usize),
   JumpIfNonZero(usize),
-  Invalid,
 }
 
-impl Op {
-  fn is_valid(&self) -> bool {
-    self != &Op::Invalid
-  }
-}
-pub fn parse(string: &str) -> Vec<Op> {
+pub fn parse(string: &str) -> Vec<Instruction> {
   let mut parsed = Vec::new();
 
   let chars = string.chars().collect::<Vec<char>>();
@@ -24,20 +18,21 @@ pub fn parse(string: &str) -> Vec<Op> {
   let mut index = 0;
   while let Some(ch) = chars.get(index) {
     let op = match ch {
-      '+' => Op::Increment(load_multiple(&chars, &mut index)),
-      '-' => Op::Decrement(load_multiple(&chars, &mut index)),
-      '>' => Op::Right(load_multiple(&chars, &mut index) as usize),
-      '<' => Op::Left(load_multiple(&chars, &mut index) as usize),
-      '.' => Op::Print,
-      ',' => Op::Read,
-      '[' => Op::JumpIfZero(0),
-      ']' => Op::JumpIfNonZero(0),
-      _ => Op::Invalid,
+      '+' => Instruction::Increment(load_multiple(&chars, &mut index)),
+      '-' => Instruction::Decrement(load_multiple(&chars, &mut index)),
+      '>' => Instruction::Right(load_multiple(&chars, &mut index) as usize),
+      '<' => Instruction::Left(load_multiple(&chars, &mut index) as usize),
+      '.' => Instruction::Print,
+      ',' => Instruction::Read,
+      '[' => Instruction::JumpIfZero(0),
+      ']' => Instruction::JumpIfNonZero(0),
+      _ => {
+        index += 1;
+        continue;
+      }
     };
 
-    if op.is_valid() {
-      parsed.push(op);
-    }
+    parsed.push(op);
 
     index += 1;
   }

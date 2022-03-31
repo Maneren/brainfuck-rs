@@ -50,4 +50,12 @@ impl Memory {
       self.ptr -= count;
     }
   }
+
+  pub fn dynamic(&self) -> bool {
+    self.dynamic
+  }
+
+  pub fn size(&self) -> usize {
+    self.data.len()
+  }
 }

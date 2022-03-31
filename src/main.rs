@@ -13,7 +13,7 @@ use std::{io::Read, time::Instant};
 use clap::Parser;
 
 use memory::Memory;
-use parser::Op;
+use parser::Instruction;
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -21,7 +21,7 @@ struct Cli {
   /// The brainfuck program file
   file: PathBuf,
 
-  /// Memory size in bytes. Accepts suffixes k, M, G. Default is set to 1k.
+  /// Memory size in bytes. Accepts suffixes k, M, G. Leave empty for dynamically allocated, starting at 256B.
   #[clap(short, long)]
   memory_size: Option<String>,
 }
@@ -41,39 +41,40 @@ fn main() {
   let elapsed = start.elapsed();
   let ops_per_second = ops as f64 / elapsed.as_secs_f64() / 1_000_000_f64;
   println!("\nExecuted in {elapsed:?} ({ops_per_second:.2}M ops/s)");
+  if memory.dynamic() {
+    println!("Max memory usage: {}", memory.size());
+  }
 }
 
-fn run(memory: &mut Memory, parsed: &[Op]) -> u64 {
+fn run(memory: &mut Memory, parsed: &[Instruction]) -> u64 {
   let mut stdin = std::io::stdin().bytes();
   let mut parsed_index = 0usize;
   let mut counter = 0;
 
   while let Some(op) = parsed.get(parsed_index) {
     match op {
-      Op::Increment(count) => memory.increment(*count),
-      Op::Decrement(count) => memory.decrement(*count),
-      Op::Right(count) => memory.right(*count),
-      Op::Left(count) => memory.left(*count),
-      Op::Print => print!("{}", memory.get() as char),
-      Op::Read => memory.set(stdin.next().unwrap_or(Ok(0)).unwrap_or_default()),
-      Op::JumpIfZero(target) => {
+      Instruction::Increment(count) => memory.increment(*count),
+      Instruction::Decrement(count) => memory.decrement(*count),
+      Instruction::Right(count) => memory.right(*count),
+      Instruction::Left(count) => memory.left(*count),
+      Instruction::Print => print!("{}", memory.get() as char),
+      Instruction::Read => memory.set(stdin.next().unwrap_or(Ok(0)).unwrap_or_default()),
+      Instruction::JumpIfZero(target) => {
         if memory.get() == 0 {
           parsed_index = *target;
         }
       }
-      Op::JumpIfNonZero(target) => {
+      Instruction::JumpIfNonZero(target) => {
         if memory.get() != 0 {
           parsed_index = *target;
         }
       }
-      Op::Invalid => unreachable!(),
     }
 
     counter += 1;
     parsed_index += 1;
   }
 
-  println!("\nExecuted {} operations", counter);
   counter
 }
 
@@ -85,6 +86,7 @@ fn create_memory(memory_size: Option<String>) -> Memory {
     };
 
     let unit = match &mem_size_input[mem_size_input.len() - 1..] {
+      "" => 1,
       "k" => 1024,
       "M" => 1024 * 1024,
       "G" => 1024 * 1024 * 1024,
@@ -95,18 +97,18 @@ fn create_memory(memory_size: Option<String>) -> Memory {
 
     Memory::new(mem_size, false)
   } else {
-    Memory::new(512, true)
+    Memory::new(256, true)
   }
 }
 
-fn link_jumps(input: &mut [Op]) {
+fn link_jumps(input: &mut [Instruction]) {
   let mut left_indexes = Vec::new();
 
   for i in 0..input.len() {
     match input[i] {
-      Op::JumpIfZero(..) => left_indexes.push(i),
+      Instruction::JumpIfZero(..) => left_indexes.push(i),
 
-      Op::JumpIfNonZero(..) => {
+      Instruction::JumpIfNonZero(..) => {
         let left = match left_indexes.pop() {
           Some(left) => left,
           None => panic!("Unmatched closing bracket!"),
@@ -114,8 +116,8 @@ fn link_jumps(input: &mut [Op]) {
 
         let right = i;
 
-        input[left] = Op::JumpIfZero(right);
-        input[right] = Op::JumpIfNonZero(left);
+        input[left] = Instruction::JumpIfZero(right);
+        input[right] = Instruction::JumpIfNonZero(left);
       }
       _ => {}
     }
