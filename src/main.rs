@@ -1,13 +1,14 @@
 #![warn(clippy::pedantic)]
+#![allow(clippy::cast_precision_loss)]
 // credits:
 //   thanks to paul for fixing my stupid
 
 mod memory;
 mod parser;
 
+use std::path::PathBuf;
 use std::{collections::HashMap, fs};
 use std::{io::Read, time::Instant};
-use std::{io::Write, path::PathBuf};
 
 use clap::Parser;
 
@@ -30,41 +31,37 @@ fn main() {
 
   let program = fs::read_to_string(args.file).expect("Couldn't read from file!");
 
+  let start = Instant::now();
   let parsed = parser::parse(&program);
   let jump_table = create_jump_table(&parsed);
   let mut memory = create_memory(args.memory_size);
 
-  let start = Instant::now();
-
-  run(&mut memory, &parsed, &jump_table);
+  let ops = run(&mut memory, &parsed, &jump_table);
 
   let elapsed = start.elapsed();
-  println!("\nExecuted in {elapsed:?}");
+  let ops_per_second = ops as f64 / elapsed.as_secs_f64();
+  println!("\nExecuted in {elapsed:?} ({ops_per_second:.0} ops/s)");
 }
 
-fn run(memory: &mut Memory, parsed: &[Op], jump_table: &HashMap<usize, usize>) {
-  let mut stdout = std::io::stdout();
+fn run(memory: &mut Memory, parsed: &[Op], jump_table: &HashMap<usize, usize>) -> u64 {
   let mut stdin = std::io::stdin().bytes();
   let mut parsed_index = 0usize;
   let mut counter = 0;
 
   while let Some(op) = parsed.get(parsed_index) {
-    counter += 1;
     match op {
-      Op::CellInc => memory.increment(),
-      Op::CellDec => memory.decrement(),
-      Op::PtrInc => memory.right(),
-      Op::PtrDec => memory.left(),
-      Op::Print => stdout
-        .write_all(&[memory.get()])
-        .expect("Couldn't write to stdout!"),
+      Op::Increment(count) => memory.increment(*count),
+      Op::Decrement(count) => memory.decrement(*count),
+      Op::Right(count) => memory.right(*count),
+      Op::Left(count) => memory.left(*count),
+      Op::Print => print!("{}", memory.get() as char),
       Op::Read => memory.set(stdin.next().unwrap_or(Ok(0)).unwrap_or_default()),
-      Op::BlkPsh => {
+      Op::BlockStart => {
         if memory.get() == 0 {
           parsed_index = jump_table[&parsed_index];
         }
       }
-      Op::BlkPop => {
+      Op::BlockStop => {
         if memory.get() != 0 {
           parsed_index = jump_table[&parsed_index];
         }
@@ -72,10 +69,12 @@ fn run(memory: &mut Memory, parsed: &[Op], jump_table: &HashMap<usize, usize>) {
       Op::Invalid => unreachable!(),
     }
 
+    counter += 1;
     parsed_index += 1;
   }
 
   println!("\nExecuted {} operations", counter);
+  counter
 }
 
 fn create_memory(memory_size: Option<String>) -> Memory {
@@ -106,9 +105,9 @@ fn create_jump_table(input: &[Op]) -> HashMap<usize, usize> {
 
   for (position, operator) in input.iter().enumerate() {
     match operator {
-      Op::BlkPsh => left_positions.push(position),
+      Op::BlockStart => left_positions.push(position),
 
-      Op::BlkPop => {
+      Op::BlockStop => {
         let left = left_positions.pop().unwrap();
         let right = position;
         jump_table.insert(left, right);

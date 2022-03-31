@@ -22,16 +22,16 @@ impl Memory {
     self.data[self.ptr] = value;
   }
 
-  pub fn increment(&mut self) {
-    self.data[self.ptr] += 1;
+  pub fn increment(&mut self, count: u8) {
+    self.data[self.ptr] = self.data[self.ptr].wrapping_add(count);
   }
 
-  pub fn decrement(&mut self) {
-    self.data[self.ptr] -= 1;
+  pub fn decrement(&mut self, count: u8) {
+    self.data[self.ptr] = self.data[self.ptr].wrapping_sub(count);
   }
 
-  pub fn right(&mut self) {
-    self.ptr = self.ptr.wrapping_add(1);
+  pub fn right(&mut self, count: usize) {
+    self.ptr = self.ptr.wrapping_add(count);
 
     if self.dynamic {
       if self.ptr >= self.data.len() {
@@ -42,11 +42,12 @@ impl Memory {
     }
   }
 
-  pub fn left(&mut self) {
-    if self.ptr == 0 {
-      self.ptr = self.data.len() - 1;
+  pub fn left(&mut self, count: usize) {
+    if count > self.ptr {
+      let count = count - self.ptr;
+      self.ptr = self.data.len() - count;
     } else {
-      self.ptr -= 1;
+      self.ptr -= count;
     }
   }
 }
