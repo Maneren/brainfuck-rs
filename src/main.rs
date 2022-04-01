@@ -3,6 +3,7 @@
 // credits:
 //   thanks to paul for fixing my stupid
 
+mod instructions;
 mod memory;
 mod parser;
 
@@ -12,8 +13,8 @@ use std::{io::Read, time::Instant};
 
 use clap::Parser;
 
+use instructions::Instruction;
 use memory::Memory;
-use parser::Instruction;
 
 #[derive(Parser)]
 #[clap(author, version, about)]

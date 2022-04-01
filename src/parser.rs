@@ -1,14 +1,4 @@
-#[derive(Debug, PartialEq, Eq)]
-pub enum Instruction {
-  Increment(u8),
-  Decrement(u8),
-  Right(usize),
-  Left(usize),
-  Print,
-  Read,
-  JumpIfZero(usize),
-  JumpIfNonZero(usize),
-}
+use crate::instructions::Instruction;
 
 pub fn parse(string: &str) -> Vec<Instruction> {
   let mut parsed = Vec::new();
