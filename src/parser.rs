@@ -14,8 +14,8 @@ pub fn parse(string: &str) -> Vec<Instruction> {
       '<' => Instruction::Left(load_multiple(&chars, &mut index) as usize),
       '.' => Instruction::Print,
       ',' => Instruction::Read,
-      '[' => Instruction::JumpIfZero(0),
-      ']' => Instruction::JumpIfNonZero(0),
+      '[' => Instruction::BlockStart,
+      ']' => Instruction::BlockEnd,
       _ => {
         index += 1;
         continue;

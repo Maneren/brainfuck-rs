@@ -5,6 +5,7 @@
 
 mod instructions;
 mod memory;
+mod optimizations;
 mod parser;
 
 use std::fs;
@@ -15,6 +16,8 @@ use clap::Parser;
 
 use instructions::Instruction;
 use memory::Memory;
+
+use optimizations::{link_jumps, optimize_loops};
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -33,11 +36,10 @@ fn main() {
   let program = fs::read_to_string(args.file).expect("Couldn't read from file!");
 
   let start = Instant::now();
-  let mut parsed = parser::parse(&program);
-  link_jumps(&mut parsed);
+  let instructions = generate_instructions(&program);
   let mut memory = create_memory(args.memory_size);
 
-  let ops = run(&mut memory, &parsed);
+  let ops = run(&mut memory, &instructions);
 
   let elapsed = start.elapsed();
   let ops_per_second = ops as f64 / elapsed.as_secs_f64() / 1_000_000_f64;
@@ -47,12 +49,24 @@ fn main() {
   }
 }
 
-fn run(memory: &mut Memory, parsed: &[Instruction]) -> u64 {
+fn generate_instructions(source: &str) -> Vec<Instruction> {
+  let parsed = parser::parse(source);
+  let optimized = optimize_loops(&parsed);
+  let linked = link_jumps(&optimized);
+
+  /* println!("parsed:    {parsed:?}");
+  println!("optimized: {optimized:?}");
+  println!("linked:    {linked:?}"); */
+
+  linked
+}
+
+fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
   let mut stdin = std::io::stdin().bytes();
   let mut parsed_index = 0usize;
   let mut counter = 0;
 
-  while let Some(op) = parsed.get(parsed_index) {
+  while let Some(op) = instructions.get(parsed_index) {
     match op {
       Instruction::Increment(count) => memory.increment(*count),
       Instruction::Decrement(count) => memory.decrement(*count),
@@ -70,6 +84,10 @@ fn run(memory: &mut Memory, parsed: &[Instruction]) -> u64 {
           parsed_index = *target;
         }
       }
+      Instruction::Clear => memory.set(0),
+      Instruction::ScanLeft => memory.scan_left(),
+      Instruction::ScanRight => memory.scan_right(),
+      Instruction::BlockStart | Instruction::BlockEnd => unreachable!(),
     }
 
     counter += 1;
@@ -98,31 +116,6 @@ fn create_memory(memory_size: Option<String>) -> Memory {
 
     Memory::new(mem_size, false)
   } else {
-    Memory::new(256, true)
+    Memory::new(16, true)
   }
-}
-
-fn link_jumps(input: &mut [Instruction]) {
-  let mut left_indexes = Vec::new();
-
-  for i in 0..input.len() {
-    match input[i] {
-      Instruction::JumpIfZero(..) => left_indexes.push(i),
-
-      Instruction::JumpIfNonZero(..) => {
-        let left = match left_indexes.pop() {
-          Some(left) => left,
-          None => panic!("Unmatched closing bracket!"),
-        };
-
-        let right = i;
-
-        input[left] = Instruction::JumpIfZero(right);
-        input[right] = Instruction::JumpIfNonZero(left);
-      }
-      _ => {}
-    }
-  }
-
-  assert!(left_indexes.is_empty(), "Unmatched opening bracket!");
 }

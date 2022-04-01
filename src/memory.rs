@@ -34,8 +34,8 @@ impl Memory {
     self.ptr = self.ptr.wrapping_add(count);
 
     if self.dynamic {
-      if self.ptr >= self.data.len() {
-        self.data.push(0);
+      if self.ptr >= self.data.len() - 1 {
+        self.data.resize(self.ptr + 1, 0);
       }
     } else {
       self.ptr %= self.data.len();
@@ -48,6 +48,18 @@ impl Memory {
       self.ptr = self.data.len() - count;
     } else {
       self.ptr -= count;
+    }
+  }
+
+  pub fn scan_right(&mut self) {
+    while self.get() != 0 {
+      self.increment(1);
+    }
+  }
+
+  pub fn scan_left(&mut self) {
+    while self.get() != 0 {
+      self.decrement(1);
     }
   }
 
