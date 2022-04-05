@@ -50,15 +50,11 @@ fn main() {
 }
 
 fn generate_instructions(source: &str) -> Vec<Instruction> {
-  let parsed = parser::parse(source);
-  let optimized = optimize_loops(&parsed);
-  let linked = link_jumps(&optimized);
-
   /* println!("parsed:    {parsed:?}");
   println!("optimized: {optimized:?}");
   println!("linked:    {linked:?}"); */
 
-  linked
+  link_jumps(&optimize_loops(&parser::parse(source)))
 }
 
 fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
