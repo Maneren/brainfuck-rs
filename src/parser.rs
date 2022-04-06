@@ -10,8 +10,8 @@ pub fn parse(string: &str) -> Vec<Instruction> {
     let op = match ch {
       '+' => Instruction::Increment(load_multiple(&chars, &mut index)),
       '-' => Instruction::Decrement(load_multiple(&chars, &mut index)),
-      '>' => Instruction::Right(load_multiple(&chars, &mut index) as usize),
-      '<' => Instruction::Left(load_multiple(&chars, &mut index) as usize),
+      '>' => Instruction::Right,
+      '<' => Instruction::Left,
       '.' => Instruction::Print,
       ',' => Instruction::Read,
       '[' => Instruction::BlockStart,

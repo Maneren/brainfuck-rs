@@ -25,7 +25,7 @@ pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
         result[left] = JumpIfZero(right);
         result.push(JumpIfNonZero(left));
       }
-      instruction => result.push(*instruction),
+      instruction => result.push(instruction.clone()),
     }
   }
 
@@ -35,31 +35,96 @@ pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
 }
 
 pub fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
-  let mut result = Vec::with_capacity(source.len());
+  let mut first_stage = Vec::with_capacity(source.len());
 
   // optimize clear and scan loops
   let mut i = 0;
   while i < source.len() {
     match (source.get(i), source.get(i + 1), source.get(i + 2)) {
       (Some(BlockStart), Some(Increment(1) | Decrement(1)), Some(BlockEnd)) => {
-        result.push(Clear);
+        first_stage.push(Clear);
         i += 2;
       }
-      (Some(BlockStart), Some(Left(1)), Some(BlockEnd)) => {
-        result.push(ScanLeft);
+      (Some(BlockStart), Some(Left), Some(BlockEnd)) => {
+        first_stage.push(ScanLeft);
         i += 2;
       }
-      (Some(BlockStart), Some(Right(1)), Some(BlockEnd)) => {
-        result.push(ScanRight);
+      (Some(BlockStart), Some(Right), Some(BlockEnd)) => {
+        first_stage.push(ScanRight);
         i += 2;
       }
       _ => {
-        result.push(source[i]);
+        first_stage.push(source[i].clone());
       }
     }
     i += 1;
   }
 
+  let mut result = Vec::new();
+
+  let mut i = 0;
+  while i < first_stage.len() {
+    let current = &first_stage[i];
+
+    match current {
+      Increment(..) | Decrement(..) | Right | Left => {
+        let mut memory_pointer = 0;
+
+        let mut offset = 0;
+        let mut data = vec![0; 1];
+
+        while i < source.len() {
+          match &source[i] {
+            Increment(amount) => data[memory_pointer] = i64::from(*amount),
+            Decrement(amount) => data[memory_pointer] = -i64::from(*amount),
+            Right => {
+              memory_pointer += 1;
+              if memory_pointer >= data.len() {
+                data.push(0);
+              }
+            }
+            Left => {
+              if memory_pointer > 0 {
+                memory_pointer -= 1;
+              } else {
+                offset -= 1;
+
+                data.insert(0, 0);
+              }
+            }
+            _ => {
+              i -= 1;
+              break;
+            }
+          }
+
+          i += 1;
+        }
+
+        let shift = memory_pointer as i64 + offset as i64;
+
+        // remove unused data
+        while let Some(0) = data.last() {
+          data.pop();
+        }
+
+        while let Some(0) = data.get(0) {
+          offset += 1;
+          data.remove(0);
+        }
+
+        result.push(Instruction::ModifyRun {
+          shift,
+          offset,
+          data,
+        });
+      }
+      _ => result.push(current.clone()),
+    }
+    i += 1;
+  }
+
+  println!("second stage: {result:#?}");
 
   result
 }

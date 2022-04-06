@@ -1,5 +1,7 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_possible_truncation)]
 // credits:
 //   thanks to paul for fixing my stupid
 
@@ -37,6 +39,8 @@ fn main() {
 
   let start = Instant::now();
   let instructions = generate_instructions(&program);
+  println!("Compiled in {:?}\n", start.elapsed());
+
   let mut memory = create_memory(args.memory_size);
 
   let ops = run(&mut memory, &instructions);
@@ -50,10 +54,6 @@ fn main() {
 }
 
 fn generate_instructions(source: &str) -> Vec<Instruction> {
-  /* println!("parsed:    {parsed:?}");
-  println!("optimized: {optimized:?}");
-  println!("linked:    {linked:?}"); */
-
   link_jumps(&optimize_loops(&parser::parse(source)))
 }
 
@@ -64,12 +64,8 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
 
   while let Some(op) = instructions.get(parsed_index) {
     match op {
-      Instruction::Increment(count) => memory.increment(*count),
-      Instruction::Decrement(count) => memory.decrement(*count),
-      Instruction::Right(count) => memory.right(*count),
-      Instruction::Left(count) => memory.left(*count),
       Instruction::Print => print!("{}", memory.get() as char),
-      Instruction::Read => memory.set(stdin.next().unwrap_or(Ok(0)).unwrap_or_default()),
+      Instruction::Read => memory.set(0, stdin.next().unwrap_or(Ok(0)).unwrap_or_default()),
       Instruction::JumpIfZero(target) => {
         if memory.get() == 0 {
           parsed_index = *target;
@@ -80,10 +76,17 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
           parsed_index = *target;
         }
       }
-      Instruction::Clear => memory.set(0),
+      Instruction::Clear => memory.set(0, 0),
       Instruction::ScanLeft => memory.scan_left(),
       Instruction::ScanRight => memory.scan_right(),
-      Instruction::BlockStart | Instruction::BlockEnd => unreachable!(),
+      Instruction::ModifyRun {
+        shift,
+        offset,
+        data,
+      } => {
+        memory.modify(data, *offset, *shift);
+      }
+      _ => unreachable!(),
     }
 
     counter += 1;
