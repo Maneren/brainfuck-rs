@@ -35,6 +35,7 @@ pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
 }
 
 pub fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
+  // let first_stage = source;
   let mut first_stage = Vec::with_capacity(source.len());
 
   // optimize clear and scan loops
@@ -73,8 +74,8 @@ pub fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
         let mut offset = 0;
         let mut data = vec![0; 1];
 
-        while i < source.len() {
-          match &source[i] {
+        while i < first_stage.len() {
+          match &first_stage[i] {
             Increment(amount) => data[memory_pointer] = i64::from(*amount),
             Decrement(amount) => data[memory_pointer] = -i64::from(*amount),
             Right => {
@@ -121,6 +122,7 @@ pub fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
       }
       _ => result.push(current.clone()),
     }
+
     i += 1;
   }
 

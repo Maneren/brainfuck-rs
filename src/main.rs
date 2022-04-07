@@ -3,22 +3,18 @@
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_possible_truncation)]
 // credits:
-//   thanks to paul for fixing my stupid
+//   fade - base idea and code
 
 mod instructions;
 mod memory;
 mod optimizations;
 mod parser;
 
-use std::fs;
-use std::path::PathBuf;
-use std::{io::Read, time::Instant};
+use std::{fs, io::Read, path::PathBuf, time::Instant};
 
 use clap::Parser;
-
 use instructions::Instruction;
 use memory::Memory;
-
 use optimizations::{link_jumps, optimize_loops};
 
 #[derive(Parser)]
@@ -63,6 +59,7 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
   let mut counter = 0;
 
   while let Some(op) = instructions.get(parsed_index) {
+    //dbg!(parsed_index, op);
     match op {
       Instruction::Print => print!("{}", memory.get() as char),
       Instruction::Read => memory.set(0, stdin.next().unwrap_or(Ok(0)).unwrap_or_default()),
@@ -85,14 +82,17 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
         data,
       } => {
         memory.modify(data, *offset, *shift);
+        //      dbg!(parsed_index);
       }
       _ => unreachable!(),
     }
+    //  dbg!(&memory);
 
     counter += 1;
     parsed_index += 1;
   }
 
+  dbg!(memory);
   counter
 }
 
@@ -104,7 +104,7 @@ fn create_memory(memory_size: Option<String>) -> Memory {
     };
 
     let unit = match &mem_size_input[mem_size_input.len() - 1..] {
-      "" => 1,
+      "B" => 1,
       "k" => 1024,
       "M" => 1024 * 1024,
       "G" => 1024 * 1024 * 1024,

@@ -1,14 +1,14 @@
 /*
- Optimizing brainfuck implementation of dialect based on
- Daniel's dbfi (see "A very short self-interpreter")
- This interpreter has only one input: program and input to the
- program have to be separated with ! e.g. ",.!a" prints 'a'
- To use it in interactive mode paste your program as input.
- This program can be compiled with NOLNR macro defined.
- NOLNR disables optimization of linear loops (where '<>' balanced), e.g. [->+>++<<].
- Linear loop is then executed in one step.
- Oleg Mazonka 4 Dec 2006  http://mazonka.com/
- */
+   Optimizing brainfuck implementation of dialect based on
+   Daniel's dbfi (see "A very short self-interpreter")
+   This interpreter has only one input: program and input to the
+   program have to be separated with ! e.g. ",.!a" prints 'a'
+   To use it in interactive mode paste your program as input.
+   This program can be compiled with NOLNR macro defined.
+   NOLNR disables optimization of linear loops (where '<>' balanced), e.g. [->+>++<<].
+   Linear loop is then executed in one step.
+   Oleg Mazonka 4 Dec 2006  http://mazonka.com/
+   */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -37,7 +37,7 @@ void printop(Instruction *z)
   printf("op: c=%c, d='", z->c);
 
   /* if (!strchr("<>+-", z->c))
-    printf("%c", (char)z->c); */
+     printf("%c", (char)z->c); */
 
   for (int i = 0; i < z->db_length; i++)
     printf("%c", (char)z->db[i]);
@@ -113,7 +113,7 @@ int consume(Instruction *instruction)
       {
         instruction->offset--;
         instruction->d = resize_int_array(instruction->d, instruction->d_length + 1, instruction->d_length);
-        for (i = instruction->d_length; i > 0; i--)
+        for (int i = instruction->d_length; i > 0; i--)
           instruction->d[i] = instruction->d[i - 1];
         instruction->d[0] = 0;
         instruction->d_length++;
@@ -191,10 +191,10 @@ int main()
     instruction_array[i].go = &instruction_array[instruction_array[i].index_go];
   }
 
-  for (size_t i = 0; i < instruction_array_length; i++)
-  {
-    printop(instruction_array + i);
-  }
+  /*  for (size_t i = 0; i < instruction_array_length; i++)
+      {
+      printop(instruction_array + i);
+      } */
 
   memory_size = 1000; /* any number */
   memory = resize_int_array(0, memory_size, 0);

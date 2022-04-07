@@ -1,6 +1,8 @@
-#[derive(Debug, Clone)]
+use std::fmt::{self, Debug};
+
+#[derive(Clone)]
 pub struct Memory {
-  data: Vec<u8>,
+  pub data: Vec<u8>,
   ptr: usize,
   dynamic: bool,
 }
@@ -19,9 +21,16 @@ impl Memory {
   }
 
   pub fn set(&mut self, offset: i64, value: u8) {
-    let index = (self.ptr as i64 + offset) as usize;
+    let index = self.ptr as i64 + offset;
 
-    assert!(index < self.data.len(), "Invalid memory access!");
+    assert!(
+      index < self.data.len() as i64 && index >= 0,
+      "Invalid memory access! index: {}, memory size: {}",
+      index,
+      self.data.len()
+    );
+
+    let index = index as usize;
 
     self.data[index] = value;
   }
@@ -30,12 +39,18 @@ impl Memory {
     for (i, value) in data.iter().enumerate() {
       let index = self.ptr as i64 + offset + i as i64;
 
-      assert!(
-        index < self.data.len() as i64 && index >= 0,
-        "Invalid memory access!"
-      );
+      assert!(index >= 0, "Invalid memory access! index: {}", index,);
 
-      let index = index as usize;
+      let mut index = index as usize;
+
+      if index >= self.data.len() {
+        //        dbg!(self.dynamic, index, self.data.len());
+        if self.dynamic {
+          self.data.resize(index + 1, 0);
+        } else {
+          index -= self.data.len();
+        }
+      }
 
       if *value >= 0 {
         self.data[index] = self.data[index].wrapping_add(*value as u8);
@@ -95,5 +110,18 @@ impl Memory {
 
   pub fn size(&self) -> usize {
     self.data.len()
+  }
+}
+
+impl Debug for Memory {
+  fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    let mem = self
+      .data
+      .iter()
+      .map(|x| format!("{x}"))
+      .collect::<Vec<_>>()
+      .join(",");
+
+    writeln!(f, "ptr: {}, data: [{mem}]", self.ptr)
   }
 }
