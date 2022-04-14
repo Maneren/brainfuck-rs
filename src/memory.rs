@@ -16,47 +16,57 @@ impl Memory {
     }
   }
 
-  pub fn get(&self) -> u8 {
-    self.data[self.ptr]
+  pub fn get(&mut self, offset: i64) -> u8 {
+    let index = self.ptr as i64 + offset;
+
+    /*    assert!(
+    index < self.data.len() as i64 && index >= 0,
+    "Invalid memory access! index: {}, memory size: {}",
+    index,
+    self.data.len()
+    ); */
+
+    let index = self.normalize_index(index);
+
+    self.data[index]
   }
 
   pub fn set(&mut self, offset: i64, value: u8) {
     let index = self.ptr as i64 + offset;
-
-    assert!(
-      index < self.data.len() as i64 && index >= 0,
-      "Invalid memory access! index: {}, memory size: {}",
-      index,
-      self.data.len()
-    );
-
-    let index = index as usize;
+    let index = self.normalize_index(index);
 
     self.data[index] = value;
   }
 
+  fn normalize_index(&mut self, mut index: i64) -> usize {
+    if index < 0 {
+      index += self.data.len() as i64;
+    }
+
+    let mut index = index as usize;
+
+    if index >= self.data.len() {
+      if self.dynamic {
+        self.data.resize(index + 1, 0);
+      } else {
+        index -= self.data.len();
+      }
+    }
+
+    index
+  }
+
   pub fn modify(&mut self, data: &[i64], offset: i64, shift: i64) {
     for (i, value) in data.iter().enumerate() {
-      let index = self.ptr as i64 + offset + i as i64;
+      let offset = offset + i as i64;
 
-      assert!(index >= 0, "Invalid memory access! index: {}", index,);
-
-      let mut index = index as usize;
-
-      if index >= self.data.len() {
-        //        dbg!(self.dynamic, index, self.data.len());
-        if self.dynamic {
-          self.data.resize(index + 1, 0);
-        } else {
-          index -= self.data.len();
-        }
-      }
-
-      if *value >= 0 {
-        self.data[index] = self.data[index].wrapping_add(*value as u8);
+      let new_value = if *value >= 0 {
+        self.get(offset).wrapping_add(*value as u8)
       } else {
-        self.data[index] = self.data[index].wrapping_sub(value.abs() as u8);
-      }
+        self.get(offset).wrapping_sub(value.abs() as u8)
+      };
+
+      self.set(offset, new_value);
     }
 
     self.shift(shift);
@@ -93,13 +103,13 @@ impl Memory {
   }
 
   pub fn scan_right(&mut self) {
-    while self.get() != 0 {
+    while self.get(0) != 0 {
       self.right(1);
     }
   }
 
   pub fn scan_left(&mut self) {
-    while self.get() != 0 {
+    while self.get(0) != 0 {
       self.left(1);
     }
   }
@@ -123,5 +133,61 @@ impl Debug for Memory {
       .join(",");
 
     writeln!(f, "ptr: {}, data: [{mem}]", self.ptr)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::Memory;
+
+  #[test]
+  pub fn shift() {
+    let mut mem = Memory::new(4, false);
+    mem.shift(2);
+    assert_eq!(mem.ptr, 2);
+
+    let mut mem = Memory::new(4, false);
+    mem.shift(6);
+    assert_eq!(mem.ptr, 2);
+
+    let mut mem = Memory::new(4, false);
+    mem.shift(-2);
+    assert_eq!(mem.ptr, 2);
+  }
+
+  #[test]
+  pub fn modify() {
+    let mut mem = Memory::new(4, false);
+    mem.modify(&[1, 2, 3, 4], 0, 0);
+    assert_eq!(mem.data, vec![1, 2, 3, 4]);
+    assert_eq!(mem.ptr, 0);
+
+    let mut mem = Memory::new(4, false);
+    mem.modify(&[3, 4], 2, 0);
+    assert_eq!(mem.data, vec![0, 0, 3, 4]);
+    assert_eq!(mem.ptr, 0);
+
+    let mut mem = Memory::new(4, false);
+    mem.modify(&[1, 2, 3, 4], 0, 4);
+    assert_eq!(mem.data, vec![1, 2, 3, 4]);
+    assert_eq!(mem.ptr, 0);
+
+    let mut mem = Memory::new(4, false);
+    mem.shift(2);
+    mem.modify(&[1, 2], -2, 2);
+    assert_eq!(mem.data, vec![1, 2, 0, 0]);
+    assert_eq!(mem.ptr, 0);
+
+    let mut mem = Memory::new(4, false);
+    mem.shift(2);
+    mem.modify(&[1, 2, 3], 0, 2);
+    assert_eq!(mem.data, vec![3, 0, 1, 2]);
+    assert_eq!(mem.ptr, 0);
+
+    let mut mem = Memory::new(4, false);
+    mem.shift(2);
+    mem.modify(&[1, 2, 3], -3, 2);
+    assert_eq!(mem.data, vec![2, 3, 0, 1]);
+    assert_eq!(mem.ptr, 0);
   }
 }

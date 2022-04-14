@@ -10,12 +10,17 @@ mod memory;
 mod optimizations;
 mod parser;
 
-use std::{fs, io::Read, path::PathBuf, time::Instant};
+use std::{
+  fs,
+  io::{stdin, Read},
+  path::PathBuf,
+  time::Instant,
+};
 
 use clap::Parser;
 use instructions::Instruction;
 use memory::Memory;
-use optimizations::{link_jumps, optimize_loops};
+use optimizations::{link_jumps, optimize};
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -23,7 +28,7 @@ struct Cli {
   /// The brainfuck program file
   file: PathBuf,
 
-  /// Memory size in bytes. Accepts suffixes k, M, G. Leave empty for dynamically allocated, starting at 256B.
+  /// Memory size in bytes. Accepts suffixes B, k, M, G. Leave empty for dynamically allocated, starting at 256B.
   #[clap(short, long)]
   memory_size: Option<String>,
 }
@@ -36,6 +41,8 @@ fn main() {
   let start = Instant::now();
   let instructions = generate_instructions(&program);
   println!("Compiled in {:?}\n", start.elapsed());
+
+  dbg!(&instructions);
 
   let mut memory = create_memory(args.memory_size);
 
@@ -50,26 +57,30 @@ fn main() {
 }
 
 fn generate_instructions(source: &str) -> Vec<Instruction> {
-  link_jumps(&optimize_loops(&parser::parse(source)))
+  link_jumps(&optimize(&parser::parse(source)))
 }
 
 fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
-  let mut stdin = std::io::stdin().bytes();
+  let mut stdin = stdin().bytes();
   let mut parsed_index = 0usize;
   let mut counter = 0;
 
   while let Some(op) = instructions.get(parsed_index) {
     //dbg!(parsed_index, op);
     match op {
-      Instruction::Print => print!("{}", memory.get() as char),
-      Instruction::Read => memory.set(0, stdin.next().unwrap_or(Ok(0)).unwrap_or_default()),
+      Instruction::Print => print!("{}", memory.get(0) as char),
+      Instruction::Read => {
+        // if stdin empty, use NULL char
+        let input = stdin.next().unwrap_or(Ok(0)).unwrap();
+        memory.set(0, input);
+      }
       Instruction::JumpIfZero(target) => {
-        if memory.get() == 0 {
+        if memory.get(0) == 0 {
           parsed_index = *target;
         }
       }
       Instruction::JumpIfNonZero(target) => {
-        if memory.get() != 0 {
+        if memory.get(0) != 0 {
           parsed_index = *target;
         }
       }
@@ -98,10 +109,9 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
 
 fn create_memory(memory_size: Option<String>) -> Memory {
   if let Some(mem_size_input) = memory_size {
-    let number = match mem_size_input[..mem_size_input.len() - 1].parse::<u32>() {
-      Ok(n) => n,
-      _ => panic!("Invalid memory size!"),
-    };
+    let number = mem_size_input[..mem_size_input.len() - 1]
+      .parse::<u32>()
+      .expect("Invalid memory size!");
 
     let unit = match &mem_size_input[mem_size_input.len() - 1..] {
       "B" => 1,

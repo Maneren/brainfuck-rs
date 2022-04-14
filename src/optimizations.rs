@@ -4,14 +4,14 @@ use crate::instructions::Instruction::{
 };
 
 pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
-  let mut result = Vec::new();
+  let mut result = Vec::with_capacity(input.len());
   let mut left_indexes = Vec::new();
 
   for (i, instruction) in input.iter().enumerate() {
     match instruction {
       BlockStart => {
         left_indexes.push(i);
-        result.push(JumpIfZero(0));
+        result.push(BlockStart);
       }
 
       BlockEnd => {
@@ -34,8 +34,7 @@ pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
   result
 }
 
-pub fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
-  // let first_stage = source;
+pub fn optimize(source: &[Instruction]) -> Vec<Instruction> {
   let mut first_stage = Vec::with_capacity(source.len());
 
   // optimize clear and scan loops
@@ -61,11 +60,13 @@ pub fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
     i += 1;
   }
 
+  // optimize runs
+  let source = first_stage;
   let mut result = Vec::new();
 
   let mut i = 0;
-  while i < first_stage.len() {
-    let current = &first_stage[i];
+  while i < source.len() {
+    let current = &source[i];
 
     match current {
       Increment(..) | Decrement(..) | Right | Left => {
@@ -74,8 +75,8 @@ pub fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
         let mut offset = 0;
         let mut data = vec![0; 1];
 
-        while i < first_stage.len() {
-          match &first_stage[i] {
+        while i < source.len() {
+          match &source[i] {
             Increment(amount) => data[memory_pointer] = i64::from(*amount),
             Decrement(amount) => data[memory_pointer] = -i64::from(*amount),
             Right => {
@@ -125,8 +126,6 @@ pub fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
 
     i += 1;
   }
-
-  println!("second stage: {result:#?}");
 
   result
 }
