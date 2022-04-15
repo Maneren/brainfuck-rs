@@ -4,6 +4,8 @@ pub enum Instruction {
   Decrement(u8),
   Right,
   Left,
+  Shift(i64),
+  Modify(i64),
   Print,
   Read,
   BlockStart,

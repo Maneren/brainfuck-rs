@@ -42,9 +42,9 @@ fn main() {
   let instructions = generate_instructions(&program);
   println!("Compiled in {:?}\n", start.elapsed());
 
-  dbg!(&instructions);
-
   let mut memory = create_memory(args.memory_size);
+
+  // dbg!(&instructions);
 
   let ops = run(&mut memory, &instructions);
 
@@ -66,7 +66,6 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
   let mut counter = 0;
 
   while let Some(op) = instructions.get(parsed_index) {
-    //dbg!(parsed_index, op);
     match op {
       Instruction::Print => print!("{}", memory.get(0) as char),
       Instruction::Read => {
@@ -92,18 +91,17 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
         offset,
         data,
       } => {
-        memory.modify(data, *offset, *shift);
-        //      dbg!(parsed_index);
+        memory.modify_run(data, *offset, *shift);
       }
+      Instruction::Modify(amount) => memory.modify(*amount, 0),
+      Instruction::Shift(amount) => memory.shift(*amount),
       _ => unreachable!(),
     }
-    //  dbg!(&memory);
 
     counter += 1;
     parsed_index += 1;
   }
 
-  dbg!(memory);
   counter
 }
 

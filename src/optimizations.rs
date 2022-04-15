@@ -117,11 +117,26 @@ pub fn optimize(source: &[Instruction]) -> Vec<Instruction> {
           data.remove(0);
         }
 
-        result.push(Instruction::ModifyRun {
-          shift,
-          offset,
-          data,
-        });
+        if data.is_empty() && shift != 0 {
+          result.push(Instruction::Shift(shift));
+        } else if data.len() == 1 {
+          if offset != 0 {
+            result.push(Instruction::Shift(offset));
+          }
+
+          result.push(Instruction::Modify(data[0]));
+
+          let final_shift = shift - offset;
+          if final_shift != 0 {
+            result.push(Instruction::Shift(final_shift));
+          }
+        } else {
+          result.push(Instruction::ModifyRun {
+            shift,
+            offset,
+            data,
+          });
+        }
       }
       _ => result.push(current.clone()),
     }
