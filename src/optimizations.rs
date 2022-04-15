@@ -77,8 +77,10 @@ pub fn optimize(source: &[Instruction]) -> Vec<Instruction> {
 
         while i < source.len() {
           match &source[i] {
-            Increment(amount) => data[memory_pointer] = i64::from(*amount),
-            Decrement(amount) => data[memory_pointer] = -i64::from(*amount),
+            Increment(amount) => {
+              data[memory_pointer] += i64::from(*amount);
+            }
+            Decrement(amount) => data[memory_pointer] += -i64::from(*amount),
             Right => {
               memory_pointer += 1;
               if memory_pointer >= data.len() {
