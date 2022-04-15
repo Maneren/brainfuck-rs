@@ -51,9 +51,6 @@ fn main() {
   let elapsed = start.elapsed();
   let ops_per_second = ops as f64 / elapsed.as_secs_f64() / 1_000_000_f64;
   println!("\nExecuted in {elapsed:?} ({ops_per_second:.2}M ops/s)");
-  if memory.dynamic() {
-    println!("Max memory usage: {}", memory.size());
-  }
 }
 
 fn generate_instructions(source: &str) -> Vec<Instruction> {
@@ -121,8 +118,8 @@ fn create_memory(memory_size: Option<String>) -> Memory {
 
     let mem_size = (number * unit) as usize;
 
-    Memory::new(mem_size, false)
+    Memory::new(mem_size)
   } else {
-    Memory::new(16, true)
+    Memory::new(30000)
   }
 }
