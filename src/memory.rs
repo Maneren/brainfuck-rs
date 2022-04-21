@@ -4,17 +4,19 @@ use std::fmt::{self, Debug};
 pub struct Memory {
   pub data: Vec<u8>,
   ptr: usize,
+  dynamic: bool,
 }
 
 impl Memory {
-  pub fn new(size: usize) -> Self {
+  pub fn new(size: usize, dynamic: bool) -> Self {
     Self {
       data: vec![0; size],
       ptr: 0,
+      dynamic,
     }
   }
 
-  pub fn get(&self, offset: i64) -> u8 {
+  pub fn get(&mut self, offset: i64) -> u8 {
     let index = self.ptr as i64 + offset;
     let index = self.normalize_index(index);
 
@@ -28,8 +30,7 @@ impl Memory {
     self.data[index] = value;
   }
 
-  #[inline]
-  fn normalize_index(&self, mut index: i64) -> usize {
+  fn normalize_index(&mut self, mut index: i64) -> usize {
     if index < 0 {
       index += self.data.len() as i64;
     }
@@ -37,25 +38,28 @@ impl Memory {
     let mut index = index as usize;
 
     if index >= self.data.len() {
-      index -= self.data.len();
+      if self.dynamic {
+        self.data.resize(index + 1, 0);
+      } else {
+        index -= self.data.len();
+      }
     }
 
     index
   }
 
-  #[inline]
   pub fn modify_run(&mut self, data: &[i64], offset: i64, shift: i64) {
     let mut offset = offset;
 
     for value in data {
       self.modify(*value, offset);
+
       offset += 1;
     }
 
     self.shift(shift);
   }
 
-  #[inline]
   pub fn modify(&mut self, value: i64, offset: i64) {
     let new_value = if value >= 0 {
       self.get(offset).wrapping_add(value as u8)
@@ -65,7 +69,6 @@ impl Memory {
     self.set(offset, new_value);
   }
 
-  #[inline]
   pub fn shift(&mut self, delta: i64) {
     if delta >= 0 {
       self.right(delta as usize);
@@ -78,7 +81,11 @@ impl Memory {
     self.ptr = self.ptr.wrapping_add(count);
     let len = self.data.len();
 
-    if self.ptr >= len {
+    if self.dynamic {
+      if self.ptr >= len {
+        self.data.resize(self.ptr + 1, 0);
+      }
+    } else if self.ptr >= len {
       self.ptr -= len;
     }
   }
@@ -102,6 +109,10 @@ impl Memory {
     while self.get(0) != 0 {
       self.left(1);
     }
+  }
+
+  pub fn dynamic(&self) -> bool {
+    self.dynamic
   }
 
   pub fn size(&self) -> usize {
@@ -128,49 +139,49 @@ mod tests {
 
   #[test]
   pub fn shift() {
-    let mut mem = Memory::new(4);
+    let mut mem = Memory::new(4, false);
     mem.shift(2);
     assert_eq!(mem.ptr, 2);
 
-    let mut mem = Memory::new(4);
+    let mut mem = Memory::new(4, false);
     mem.shift(6);
     assert_eq!(mem.ptr, 2);
 
-    let mut mem = Memory::new(4);
+    let mut mem = Memory::new(4, false);
     mem.shift(-2);
     assert_eq!(mem.ptr, 2);
   }
 
   #[test]
   pub fn modify() {
-    let mut mem = Memory::new(4);
+    let mut mem = Memory::new(4, false);
     mem.modify_run(&[1, 2, 3, 4], 0, 0);
     assert_eq!(mem.data, vec![1, 2, 3, 4]);
     assert_eq!(mem.ptr, 0);
 
-    let mut mem = Memory::new(4);
+    let mut mem = Memory::new(4, false);
     mem.modify_run(&[3, 4], 2, 0);
     assert_eq!(mem.data, vec![0, 0, 3, 4]);
     assert_eq!(mem.ptr, 0);
 
-    let mut mem = Memory::new(4);
+    let mut mem = Memory::new(4, false);
     mem.modify_run(&[1, 2, 3, 4], 0, 4);
     assert_eq!(mem.data, vec![1, 2, 3, 4]);
     assert_eq!(mem.ptr, 0);
 
-    let mut mem = Memory::new(4);
+    let mut mem = Memory::new(4, false);
     mem.shift(2);
     mem.modify_run(&[1, 2], -2, 2);
     assert_eq!(mem.data, vec![1, 2, 0, 0]);
     assert_eq!(mem.ptr, 0);
 
-    let mut mem = Memory::new(4);
+    let mut mem = Memory::new(4, false);
     mem.shift(2);
     mem.modify_run(&[1, 2, 3], 0, 2);
     assert_eq!(mem.data, vec![3, 0, 1, 2]);
     assert_eq!(mem.ptr, 0);
 
-    let mut mem = Memory::new(4);
+    let mut mem = Memory::new(4, false);
     mem.shift(2);
     mem.modify_run(&[1, 2, 3], -3, 2);
     assert_eq!(mem.data, vec![2, 3, 0, 1]);
