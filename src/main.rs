@@ -2,6 +2,7 @@
 #![allow(clippy::cast_precision_loss)]
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_possible_wrap)]
 // credits:
 //   fade - base idea and code
 
@@ -51,9 +52,7 @@ fn main() {
   let elapsed = start.elapsed();
   let ops_per_second = ops as f64 / elapsed.as_secs_f64() / 1_000_000_f64;
   println!("\nExecuted in {elapsed:?} ({ops_per_second:.2}M ops/s)");
-  if memory.dynamic() {
-    println!("Max memory usage: {}", memory.size());
-  }
+  println!("Max memory usage: {}", memory.size());
 }
 
 fn generate_instructions(source: &str) -> Vec<Instruction> {
@@ -67,33 +66,38 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
 
   while let Some(op) = instructions.get(parsed_index) {
     match op {
-      Instruction::Print => print!("{}", memory.get(0) as char),
+      Instruction::Print => print!("{}", memory.get() as char),
       Instruction::Read => {
         // if stdin empty, use NULL char
         let input = stdin.next().unwrap_or(Ok(0)).unwrap();
         memory.set(0, input);
       }
       Instruction::JumpIfZero(target) => {
-        if memory.get(0) == 0 {
+        if memory.get() == 0 {
           parsed_index = *target;
         }
       }
       Instruction::JumpIfNonZero(target) => {
-        if memory.get(0) != 0 {
+        if memory.get() != 0 {
           parsed_index = *target;
         }
       }
-      Instruction::Clear => memory.set(0, 0),
-      Instruction::ScanLeft => memory.scan_left(),
-      Instruction::ScanRight => memory.scan_right(),
-      Instruction::ModifyRun {
-        shift,
-        offset,
-        data,
-      } => {
-        memory.modify_run(data, *offset, *shift);
+      Instruction::JumpIfZeroWithData(target, data) => {
+        if memory.get() == 0 {
+          parsed_index = *target;
+        }
+        memory.modify_run(data);
       }
-      Instruction::Modify(amount) => memory.modify(*amount, 0),
+      Instruction::JumpIfNonZeroWithData(target, data) => {
+        if memory.get() != 0 {
+          parsed_index = *target;
+        }
+        memory.modify_run(data);
+      }
+      Instruction::Clear => memory.set(0, 0),
+      Instruction::ModifyRun(data) => {
+        memory.modify_run(data);
+      }
       Instruction::Shift(amount) => memory.shift(*amount),
       _ => unreachable!(),
     }
@@ -121,8 +125,8 @@ fn create_memory(memory_size: Option<String>) -> Memory {
 
     let mem_size = (number * unit) as usize;
 
-    Memory::new(mem_size, false)
+    Memory::new(mem_size)
   } else {
-    Memory::new(16, true)
+    Memory::new(512)
   }
 }

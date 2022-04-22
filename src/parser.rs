@@ -3,13 +3,10 @@ use crate::instructions::Instruction;
 pub fn parse(string: &str) -> Vec<Instruction> {
   let mut parsed = Vec::new();
 
-  let chars = string.chars().collect::<Vec<char>>();
-
-  let mut index = 0;
-  while let Some(ch) = chars.get(index) {
+  for ch in string.chars() {
     let op = match ch {
-      '+' => Instruction::Increment(load_multiple(&chars, &mut index)),
-      '-' => Instruction::Decrement(load_multiple(&chars, &mut index)),
+      '+' => Instruction::Increment,
+      '-' => Instruction::Decrement,
       '>' => Instruction::Right,
       '<' => Instruction::Left,
       '.' => Instruction::Print,
@@ -17,34 +14,14 @@ pub fn parse(string: &str) -> Vec<Instruction> {
       '[' => Instruction::BlockStart,
       ']' => Instruction::BlockEnd,
       _ => {
-        index += 1;
         continue;
       }
     };
 
     parsed.push(op);
-
-    index += 1;
   }
 
   parsed
-}
-
-fn load_multiple(chars: &[char], index: &mut usize) -> u8 {
-  let char = chars[*index];
-  let mut count = 1;
-
-  while let Some(&ch) = chars.get(*index + count as usize) {
-    if ch == char {
-      count += 1;
-    } else {
-      break;
-    }
-  }
-
-  *index += count as usize - 1;
-
-  count
 }
 
 #[cfg(test)]

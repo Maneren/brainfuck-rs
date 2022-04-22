@@ -204,7 +204,7 @@ int main()
   instruction_array_end = instruction_array + instruction_array_length;
 
   // run
-  for (; current_instruction != instruction_array_end; ++current_instruction)
+  for (; current_instruction < instruction_array_end; ++current_instruction)
   {
     if (current_instruction->c == ']')
     {

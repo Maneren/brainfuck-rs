@@ -1,23 +1,28 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ModifyRunData {
+  pub shift: i32,
+  pub offset: i32,
+  pub data: Vec<i32>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Instruction {
-  Increment(u8),
-  Decrement(u8),
+  Increment,
+  Decrement,
   Right,
   Left,
-  Shift(i64),
-  Modify(i64),
   Print,
   Read,
   BlockStart,
   BlockEnd,
+
+  Clear,
+  Shift(i32),
+  BlockStartWithData(ModifyRunData),
+  BlockEndWithData(ModifyRunData),
   JumpIfZero(usize),
   JumpIfNonZero(usize),
-  ModifyRun {
-    shift: i64,
-    offset: i64,
-    data: Vec<i64>,
-  },
-  Clear,
-  ScanLeft,
-  ScanRight,
+  JumpIfZeroWithData(usize, ModifyRunData),
+  JumpIfNonZeroWithData(usize, ModifyRunData),
+  ModifyRun(ModifyRunData),
 }
