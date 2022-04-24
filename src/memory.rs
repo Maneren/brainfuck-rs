@@ -49,7 +49,7 @@ impl Memory {
 
     let resulting_len = (self.ptr as i32 + offset) as usize + data.len();
 
-    if resulting_len >= self.data.len() {
+    if resulting_len > self.data.len() {
       self.data.resize(resulting_len, Wrapping(0));
     }
 
@@ -65,8 +65,6 @@ impl Memory {
       ptr += 1;
     }
 
-    //    assert!(self.ptr < 100, "{shift} {offset} {data:?}");
-
     self.shift(*shift);
   }
 
@@ -74,12 +72,11 @@ impl Memory {
     if delta > 0 {
       let resulting_len = (self.ptr as i32 + delta + 1) as usize;
 
-      if resulting_len >= self.data.len() {
+      if resulting_len > self.data.len() {
         self.data.resize(resulting_len, Wrapping(0));
       }
     }
 
-    //  dbg!(self.ptr, delta);
     self.ptr += delta;
   }
 

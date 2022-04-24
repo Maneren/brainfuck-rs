@@ -18,11 +18,7 @@ pub enum Instruction {
 
   Clear,
   Shift(i32),
-  BlockStartWithData(ModifyRunData),
-  BlockEndWithData(ModifyRunData),
   JumpIfZero(usize),
   JumpIfNonZero(usize),
-  JumpIfZeroWithData(usize, ModifyRunData),
-  JumpIfNonZeroWithData(usize, ModifyRunData),
   ModifyRun(ModifyRunData),
 }

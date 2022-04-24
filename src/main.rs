@@ -20,7 +20,7 @@ use std::{
 };
 
 use clap::Parser;
-use instructions::Instruction;
+use instructions::{Instruction, ModifyRunData};
 use memory::Memory;
 use optimizations::{link_jumps, optimize};
 
@@ -65,45 +65,45 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
 
   while let Some(op) = instructions.get(parsed_index) {
     match op {
-      Instruction::Print => print!("{}", memory.get().0 as char),
+      Instruction::ModifyRun(data) => {
+        memory.modify_run(data);
+        let ModifyRunData {
+          shift,
+          offset,
+          data,
+        } = data;
+        counter += *shift as u64 + *offset as u64 + data.len() as u64;
+      }
+      Instruction::Print => {
+        print!("{}", memory.get().0 as char);
+        counter += 1;
+      }
       Instruction::Read => {
         // if stdin empty, use NULL char
         let input = stdin.next().unwrap_or(Ok(0)).unwrap();
         memory.set(0, input);
+        counter += 1;
+      }
+      Instruction::Clear => memory.set(0, 0),
+      Instruction::Shift(amount) => {
+        memory.shift(*amount);
+        counter += 1;
       }
       Instruction::JumpIfZero(target) => {
         if memory.get() == Wrapping(0) {
           parsed_index = *target;
         }
+        counter += 1;
       }
       Instruction::JumpIfNonZero(target) => {
         if memory.get() != Wrapping(0) {
           parsed_index = *target;
         }
+        counter += 1;
       }
-      Instruction::JumpIfZeroWithData(target, data) => {
-        if memory.get() == Wrapping(0) {
-          parsed_index = *target - 1;
-        } else {
-          memory.modify_run(data);
-        }
-      }
-      Instruction::JumpIfNonZeroWithData(target, data) => {
-        if memory.get() != Wrapping(0) {
-          parsed_index = *target - 1;
-        } else {
-          memory.modify_run(data);
-        }
-      }
-      Instruction::Clear => memory.set(0, 0),
-      Instruction::ModifyRun(data) => {
-        memory.modify_run(data);
-      }
-      Instruction::Shift(amount) => memory.shift(*amount),
       _ => unreachable!(),
     }
 
-    counter += 1;
     parsed_index += 1;
   }
 
