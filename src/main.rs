@@ -81,10 +81,10 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
       Instruction::Read => {
         // if stdin empty, use NULL char
         let input = stdin.next().unwrap_or(Ok(0)).unwrap();
-        memory.set(0, input);
+        memory.set(input);
         counter += 1;
       }
-      Instruction::Clear => memory.set(0, 0),
+      Instruction::Clear => memory.set(0),
       Instruction::Shift(amount) => {
         memory.shift(*amount);
         counter += 1;

@@ -67,7 +67,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
         let mut memory_pointer = 0;
 
         let mut offset = 0;
-        let mut data = vec![0; 1];
+        let mut data = vec![0];
 
         while i < source.len() {
           match &source[i] {

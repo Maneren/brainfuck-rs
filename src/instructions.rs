@@ -2,7 +2,7 @@
 pub struct ModifyRunData {
   pub shift: i32,
   pub offset: i32,
-  pub data: Vec<i32>,
+  pub data: Vec<u8>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]

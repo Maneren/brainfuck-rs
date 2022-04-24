@@ -24,14 +24,8 @@ impl Memory {
     self.data[self.ptr as usize]
   }
 
-  pub fn set(&mut self, offset: i32, value: u8) {
-    let mut index = self.ptr as i32 + offset;
-
-    if index < 0 {
-      index += self.data.len() as i32;
-    }
-
-    let index = index as usize;
+  pub fn set(&mut self, value: u8) {
+    let index = self.ptr as usize;
 
     if index >= self.data.len() {
       self.data.resize(index + 1, Wrapping(0));
@@ -47,22 +41,15 @@ impl Memory {
       data,
     } = data;
 
-    let resulting_len = (self.ptr as i32 + offset) as usize + data.len();
+    let ptr = (self.ptr + offset) as usize;
 
+    let resulting_len = ptr + data.len();
     if resulting_len > self.data.len() {
       self.data.resize(resulting_len, Wrapping(0));
     }
 
-    let mut ptr = self.ptr as i32 + offset;
-
-    for &value in data {
-      if value >= 0 {
-        self.data[ptr as usize] += value as u8;
-      } else {
-        self.data[ptr as usize] -= value.abs() as u8;
-      }
-
-      ptr += 1;
+    for (i, value) in data.iter().enumerate() {
+      self.data[ptr + i] += value;
     }
 
     self.shift(*shift);
