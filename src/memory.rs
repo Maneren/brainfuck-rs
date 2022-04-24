@@ -5,7 +5,6 @@ use std::{
 
 use crate::instructions::ModifyRunData;
 
-#[derive(Clone)]
 pub struct Memory {
   pub data: Vec<Wrapping<u8>>,
   ptr: i32,

@@ -1,11 +1,11 @@
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Clone)]
 pub struct ModifyRunData {
   pub shift: i32,
   pub offset: i32,
   pub data: Vec<u8>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, Clone)]
 pub enum Instruction {
   Increment,
   Decrement,
