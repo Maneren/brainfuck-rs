@@ -1,23 +1,26 @@
-use std::fmt::{self, Debug};
+use std::{
+  fmt::{self, Debug},
+  num::Wrapping,
+};
 
 use crate::instructions::ModifyRunData;
 
 #[derive(Clone)]
 pub struct Memory {
-  pub data: Vec<u8>,
+  pub data: Vec<Wrapping<u8>>,
   ptr: i32,
 }
 
 impl Memory {
   pub fn new(size: usize) -> Self {
     Self {
-      data: vec![0; size],
+      data: vec![Wrapping(0); size],
       ptr: 0,
     }
   }
 
   #[inline]
-  pub fn get(&mut self) -> u8 {
+  pub fn get(&mut self) -> Wrapping<u8> {
     self.data[self.ptr as usize]
   }
 
@@ -31,10 +34,10 @@ impl Memory {
     let index = index as usize;
 
     if index >= self.data.len() {
-      self.data.resize(index + 1, 0);
+      self.data.resize(index + 1, Wrapping(0));
     }
 
-    self.data[index] = value;
+    self.data[index] = Wrapping(value);
   }
 
   pub fn modify_run(&mut self, data: &ModifyRunData) {
@@ -47,7 +50,7 @@ impl Memory {
     let resulting_len = (self.ptr as i32 + offset) as usize + data.len();
 
     if resulting_len >= self.data.len() {
-      self.data.resize(resulting_len, 0);
+      self.data.resize(resulting_len, Wrapping(0));
     }
 
     let mut ptr = self.ptr as i32 + offset;
@@ -62,6 +65,8 @@ impl Memory {
       ptr += 1;
     }
 
+    //    assert!(self.ptr < 100, "{shift} {offset} {data:?}");
+
     self.shift(*shift);
   }
 
@@ -70,10 +75,11 @@ impl Memory {
       let resulting_len = (self.ptr as i32 + delta + 1) as usize;
 
       if resulting_len >= self.data.len() {
-        self.data.resize(resulting_len, 0);
+        self.data.resize(resulting_len, Wrapping(0));
       }
     }
 
+    //  dbg!(self.ptr, delta);
     self.ptr += delta;
   }
 

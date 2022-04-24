@@ -14,6 +14,7 @@ mod parser;
 use std::{
   fs,
   io::{stdin, Read},
+  num::Wrapping,
   path::PathBuf,
   time::Instant,
 };
@@ -45,8 +46,6 @@ fn main() {
 
   let mut memory = create_memory(args.memory_size);
 
-  // dbg!(&instructions);
-
   let ops = run(&mut memory, &instructions);
 
   let elapsed = start.elapsed();
@@ -66,33 +65,35 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
 
   while let Some(op) = instructions.get(parsed_index) {
     match op {
-      Instruction::Print => print!("{}", memory.get() as char),
+      Instruction::Print => print!("{}", memory.get().0 as char),
       Instruction::Read => {
         // if stdin empty, use NULL char
         let input = stdin.next().unwrap_or(Ok(0)).unwrap();
         memory.set(0, input);
       }
       Instruction::JumpIfZero(target) => {
-        if memory.get() == 0 {
+        if memory.get() == Wrapping(0) {
           parsed_index = *target;
         }
       }
       Instruction::JumpIfNonZero(target) => {
-        if memory.get() != 0 {
+        if memory.get() != Wrapping(0) {
           parsed_index = *target;
         }
       }
       Instruction::JumpIfZeroWithData(target, data) => {
-        if memory.get() == 0 {
-          parsed_index = *target;
+        if memory.get() == Wrapping(0) {
+          parsed_index = *target - 1;
+        } else {
+          memory.modify_run(data);
         }
-        memory.modify_run(data);
       }
       Instruction::JumpIfNonZeroWithData(target, data) => {
-        if memory.get() != 0 {
-          parsed_index = *target;
+        if memory.get() != Wrapping(0) {
+          parsed_index = *target - 1;
+        } else {
+          memory.modify_run(data);
         }
-        memory.modify_run(data);
       }
       Instruction::Clear => memory.set(0, 0),
       Instruction::ModifyRun(data) => {
@@ -127,6 +128,6 @@ fn create_memory(memory_size: Option<String>) -> Memory {
 
     Memory::new(mem_size)
   } else {
-    Memory::new(512)
+    Memory::new(256)
   }
 }
