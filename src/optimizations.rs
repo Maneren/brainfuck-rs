@@ -7,7 +7,6 @@ use crate::instructions::{
 };
 
 pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
-  dbg!(input);
   let mut result = Vec::with_capacity(input.len());
   let mut left_indexes = Vec::new();
 

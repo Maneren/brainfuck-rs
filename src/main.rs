@@ -35,23 +35,33 @@ struct Cli {
   memory_size: Option<String>,
 }
 
+macro_rules! measure_time {
+  ($b:block) => {{
+    let start = Instant::now();
+    let value = $b;
+    let elapsed = start.elapsed();
+
+    (value, elapsed)
+  }};
+}
+
 fn main() {
   let args = Cli::parse();
 
   let program = fs::read_to_string(args.file).expect("Couldn't read from file!");
 
-  let start = Instant::now();
-  let instructions = generate_instructions(&program);
-  println!("Compiled in {:?}\n", start.elapsed());
+  let (instructions, compiled) = measure_time!({ generate_instructions(&program) });
 
   let mut memory = create_memory(args.memory_size);
 
-  let ops = run(&mut memory, &instructions);
+  let (ops, executed) = measure_time!({ run(&mut memory, &instructions) });
 
-  let elapsed = start.elapsed();
-  let ops_per_second = ops as f64 / elapsed.as_secs_f64() / 1_000_000_f64;
-  println!("\nExecuted in {elapsed:?} ({ops_per_second:.2}M ops/s)");
-  println!("Max memory usage: {}", memory.size());
+  let ops_per_second = ops as f64 / executed.as_secs_f64() / 1_000_000_f64;
+
+  println!();
+  println!("Compiled in {compiled:?}");
+  println!("Executed in {executed:?} ({ops_per_second:.2}M ops/s)");
+  println!("Peak memory usage: {}", memory.size());
 }
 
 fn generate_instructions(source: &str) -> Vec<Instruction> {
@@ -111,12 +121,12 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
 }
 
 fn create_memory(memory_size: Option<String>) -> Memory {
-  if let Some(mem_size_input) = memory_size {
-    let number = mem_size_input[..mem_size_input.len() - 1]
+  let size = memory_size.map_or(256, |input| {
+    let number = input[..input.len() - 1]
       .parse::<u32>()
       .expect("Invalid memory size!");
 
-    let unit = match &mem_size_input[mem_size_input.len() - 1..] {
+    let unit = match &input[input.len() - 1..] {
       "B" => 1,
       "k" => 1024,
       "M" => 1024 * 1024,
@@ -124,10 +134,8 @@ fn create_memory(memory_size: Option<String>) -> Memory {
       _ => panic!("Invalid memory unit!"),
     };
 
-    let mem_size = (number * unit) as usize;
+    (number * unit) as usize
+  });
 
-    Memory::new(mem_size)
-  } else {
-    Memory::new(256)
-  }
+  Memory::new(size)
 }

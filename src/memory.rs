@@ -19,7 +19,6 @@ impl Memory {
     }
   }
 
-  #[inline]
   pub fn get(&mut self) -> Wrapping<u8> {
     self.data[self.ptr as usize]
   }
@@ -84,59 +83,3 @@ impl Debug for Memory {
     writeln!(f, "ptr: {}, data: [{mem}]", self.ptr)
   }
 }
-
-/* #[cfg(test)]
-mod tests {
-  use super::Memory;
-
-  #[test]
-  pub fn shift() {
-    let mut mem = Memory::new(4);
-    mem.shift(2);
-    assert_eq!(mem.ptr, 2);
-
-    let mut mem = Memory::new(4);
-    mem.shift(6);
-    assert_eq!(mem.ptr, 2);
-
-    let mut mem = Memory::new(4);
-    mem.shift(-2);
-    assert_eq!(mem.ptr, 2);
-  }
-
-  #[test]
-  pub fn modify() {
-    let mut mem = Memory::new(4);
-    mem.modify_run(&[1, 2, 3, 4], 0, 0);
-    assert_eq!(mem.data, vec![1, 2, 3, 4]);
-    assert_eq!(mem.ptr, 0);
-
-    let mut mem = Memory::new(4);
-    mem.modify_run(&[3, 4], 2, 0);
-    assert_eq!(mem.data, vec![0, 0, 3, 4]);
-    assert_eq!(mem.ptr, 0);
-
-    let mut mem = Memory::new(4);
-    mem.modify_run(&[1, 2, 3, 4], 0, 4);
-    assert_eq!(mem.data, vec![1, 2, 3, 4]);
-    assert_eq!(mem.ptr, 0);
-
-    let mut mem = Memory::new(4);
-    mem.shift(2);
-    mem.modify_run(&[1, 2], -2, 2);
-    assert_eq!(mem.data, vec![1, 2, 0, 0]);
-    assert_eq!(mem.ptr, 0);
-
-    let mut mem = Memory::new(4);
-    mem.shift(2);
-    mem.modify_run(&[1, 2, 3], 0, 2);
-    assert_eq!(mem.data, vec![3, 0, 1, 2]);
-    assert_eq!(mem.ptr, 0);
-
-    let mut mem = Memory::new(4);
-    mem.shift(2);
-    mem.modify_run(&[1, 2, 3], -3, 2);
-    assert_eq!(mem.data, vec![2, 3, 0, 1]);
-    assert_eq!(mem.ptr, 0);
-  }
-} */
