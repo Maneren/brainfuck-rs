@@ -6,7 +6,7 @@ use std::{
 use crate::instructions::Run;
 
 pub struct Memory {
-  pub data: Vec<Wrapping<u8>>,
+  data: Vec<Wrapping<u8>>,
   ptr: Wrapping<usize>,
 }
 
@@ -26,6 +26,12 @@ impl Memory {
     self.data[self.ptr.0] = Wrapping(value);
   }
 
+  fn check_length(&mut self, length: usize) {
+    if length > self.data.len() {
+      self.data.resize(length, Wrapping(0));
+    }
+  }
+
   pub fn modify_run(&mut self, data: &Run) {
     let Run {
       shift,
@@ -35,10 +41,7 @@ impl Memory {
 
     let ptr = (self.ptr + offset).0;
 
-    let resulting_len = ptr + data.len();
-    if resulting_len > self.data.len() {
-      self.data.resize(resulting_len, Wrapping(0));
-    }
+    self.check_length(ptr + data.len());
 
     for (i, value) in data.iter().enumerate() {
       self.data[ptr + i] += value;
@@ -50,10 +53,7 @@ impl Memory {
   pub fn shift(&mut self, delta: Wrapping<usize>) {
     self.ptr += delta;
 
-    let current_len = self.ptr.0 + 1;
-    if current_len > self.data.len() {
-      self.data.resize(current_len, Wrapping(0));
-    }
+    self.check_length(self.ptr.0 + 1);
   }
 
   pub fn size(&self) -> usize {
