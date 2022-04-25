@@ -4,7 +4,7 @@ use std::num::Wrapping;
 pub struct Run {
   pub shift: Wrapping<usize>,
   pub offset: Wrapping<usize>,
-  pub data: Vec<u8>,
+  pub data: Vec<Wrapping<u8>>,
 }
 
 #[derive(Debug, Clone)]

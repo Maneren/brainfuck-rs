@@ -1,4 +1,4 @@
-use std::num::Wrapping;
+use std::{collections::VecDeque, num::Wrapping};
 
 use crate::instructions::{
   Instruction::{
@@ -62,13 +62,14 @@ fn optimize_clear_loops(source: &[Instruction]) -> Vec<Instruction> {
 fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
   let mut result = Vec::new();
   let mut i = 0;
+
   while let Some(current) = source.get(i) {
     match current {
       Increment | Decrement | Right | Left => {
         let mut memory_pointer = 0;
 
         let mut offset = Wrapping(0);
-        let mut data = vec![Wrapping(0)];
+        let mut data = VecDeque::from([Wrapping(0)]);
 
         while i < source.len() {
           match &source[i] {
@@ -77,7 +78,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
             Right => {
               memory_pointer += 1;
               if memory_pointer >= data.len() {
-                data.push(Wrapping(0));
+                data.push_back(Wrapping(0));
               }
             }
             Left => {
@@ -86,7 +87,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
               } else {
                 offset -= 1;
 
-                data.insert(0, Wrapping(0));
+                data.push_front(Wrapping(0));
               }
             }
             _ => {
@@ -99,16 +100,15 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
         }
 
         let shift = Wrapping(memory_pointer) + offset;
-        let mut data: Vec<_> = data.iter().map(|x| x.0).collect();
 
         // remove unused data
-        while let Some(0) = data.last() {
-          data.pop();
+        while let Some(Wrapping(0)) = data.back() {
+          data.pop_back();
         }
 
-        while let Some(0) = data.get(0) {
+        while let Some(Wrapping(0)) = data.front() {
           offset += 1;
-          data.remove(0);
+          data.pop_front();
         }
 
         if data.is_empty() {
@@ -116,12 +116,12 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
             result.push(Shift(shift));
           }
         } else {
-          let data = Run {
+          let run = Run {
             shift,
             offset,
-            data,
+            data: data.into_iter().collect(),
           };
-          result.push(ModifyRun(data));
+          result.push(ModifyRun(run));
         }
       }
       _ => result.push(current.clone()),
