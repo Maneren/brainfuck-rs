@@ -1,5 +1,5 @@
 #[derive(Debug, Clone)]
-pub struct ModifyRunData {
+pub struct Run {
   pub shift: i32,
   pub offset: i32,
   pub data: Vec<u8>,
@@ -20,5 +20,5 @@ pub enum Instruction {
   Shift(i32),
   JumpIfZero(usize),
   JumpIfNonZero(usize),
-  ModifyRun(ModifyRunData),
+  ModifyRun(Run),
 }

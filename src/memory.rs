@@ -3,7 +3,7 @@ use std::{
   num::Wrapping,
 };
 
-use crate::instructions::ModifyRunData;
+use crate::instructions::Run;
 
 pub struct Memory {
   pub data: Vec<Wrapping<u8>>,
@@ -18,22 +18,16 @@ impl Memory {
     }
   }
 
-  pub fn get(&mut self) -> Wrapping<u8> {
+  pub fn get(&self) -> Wrapping<u8> {
     self.data[self.ptr as usize]
   }
 
   pub fn set(&mut self, value: u8) {
-    let index = self.ptr as usize;
-
-    if index >= self.data.len() {
-      self.data.resize(index + 1, Wrapping(0));
-    }
-
-    self.data[index] = Wrapping(value);
+    self.data[self.ptr as usize] = Wrapping(value);
   }
 
-  pub fn modify_run(&mut self, data: &ModifyRunData) {
-    let ModifyRunData {
+  pub fn modify_run(&mut self, data: &Run) {
+    let Run {
       shift,
       offset,
       data,
@@ -55,8 +49,7 @@ impl Memory {
 
   pub fn shift(&mut self, delta: i32) {
     if delta > 0 {
-      let resulting_len = (self.ptr as i32 + delta + 1) as usize;
-
+      let resulting_len = (self.ptr + delta + 1) as usize;
       if resulting_len > self.data.len() {
         self.data.resize(resulting_len, Wrapping(0));
       }

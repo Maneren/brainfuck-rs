@@ -20,7 +20,7 @@ use std::{
 };
 
 use clap::Parser;
-use instructions::{Instruction, ModifyRunData};
+use instructions::{Instruction, Run};
 use memory::Memory;
 use optimizations::{link_jumps, optimize};
 
@@ -77,11 +77,13 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
     match op {
       Instruction::ModifyRun(data) => {
         memory.modify_run(data);
-        let ModifyRunData {
+
+        let Run {
           shift,
           offset,
           data,
         } = data;
+
         counter += *shift as u64 + *offset as u64 + data.len() as u64;
       }
       Instruction::Print => {
@@ -90,7 +92,10 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
       }
       Instruction::Read => {
         // if stdin empty, use NULL char
-        let input = stdin.next().unwrap_or(Ok(0)).unwrap();
+        let input = stdin
+          .next()
+          .unwrap_or(Ok(0))
+          .expect("Error when reading from stdin");
         memory.set(input);
         counter += 1;
       }
@@ -122,15 +127,18 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
 
 fn create_memory(memory_size: Option<String>) -> Memory {
   let size = memory_size.map_or(256, |input| {
-    let number = input[..input.len() - 1]
+    let number = input
+      .chars()
+      .take_while(|c| c.is_digit(10))
+      .collect::<String>()
       .parse::<u32>()
       .expect("Invalid memory size!");
 
-    let unit = match &input[input.len() - 1..] {
-      "B" => 1,
-      "k" => 1024,
-      "M" => 1024 * 1024,
-      "G" => 1024 * 1024 * 1024,
+    let unit = match input.chars().find(|c| !c.is_digit(10)) {
+      None | Some('B') => 1,
+      Some('k') => 1024,
+      Some('M') => 1024 * 1024,
+      Some('G') => 1024 * 1024 * 1024,
       _ => panic!("Invalid memory unit!"),
     };
 

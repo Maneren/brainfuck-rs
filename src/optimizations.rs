@@ -3,7 +3,7 @@ use crate::instructions::{
     self, BlockEnd, BlockStart, Clear, Decrement, Increment, JumpIfNonZero, JumpIfZero, Left,
     ModifyRun, Right, Shift,
   },
-  ModifyRunData,
+  Run,
 };
 
 pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
@@ -113,11 +113,12 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
             result.push(Shift(shift));
           }
         } else {
-          result.push(ModifyRun(ModifyRunData {
+          let data = Run {
             shift,
             offset,
             data,
-          }));
+          };
+          result.push(ModifyRun(data));
         }
       }
       _ => result.push(current.clone()),
