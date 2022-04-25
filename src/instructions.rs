@@ -1,7 +1,9 @@
+use std::num::Wrapping;
+
 #[derive(Debug, Clone)]
 pub struct Run {
-  pub shift: i32,
-  pub offset: i32,
+  pub shift: Wrapping<usize>,
+  pub offset: Wrapping<usize>,
   pub data: Vec<u8>,
 }
 
@@ -17,7 +19,7 @@ pub enum Instruction {
   BlockEnd,
 
   Clear,
-  Shift(i32),
+  Shift(Wrapping<usize>),
   JumpIfZero(usize),
   JumpIfNonZero(usize),
   ModifyRun(Run),

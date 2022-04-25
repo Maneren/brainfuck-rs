@@ -1,3 +1,5 @@
+use std::num::Wrapping;
+
 use crate::instructions::{
   Instruction::{
     self, BlockEnd, BlockStart, Clear, Decrement, Increment, JumpIfNonZero, JumpIfZero, Left,
@@ -65,8 +67,8 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
       Increment | Decrement | Right | Left => {
         let mut memory_pointer = 0;
 
-        let mut offset = 0;
-        let mut data = vec![0];
+        let mut offset = Wrapping(0);
+        let mut data = vec![Wrapping(0)];
 
         while i < source.len() {
           match &source[i] {
@@ -75,7 +77,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
             Right => {
               memory_pointer += 1;
               if memory_pointer >= data.len() {
-                data.push(0);
+                data.push(Wrapping(0));
               }
             }
             Left => {
@@ -84,7 +86,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
               } else {
                 offset -= 1;
 
-                data.insert(0, 0);
+                data.insert(0, Wrapping(0));
               }
             }
             _ => {
@@ -96,7 +98,8 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
           i += 1;
         }
 
-        let shift = memory_pointer as i32 + offset;
+        let shift = Wrapping(memory_pointer) + offset;
+        let mut data: Vec<_> = data.iter().map(|x| x.0).collect();
 
         // remove unused data
         while let Some(0) = data.last() {
@@ -109,7 +112,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
         }
 
         if data.is_empty() {
-          if shift != 0 {
+          if shift.0 != 0 {
             result.push(Shift(shift));
           }
         } else {

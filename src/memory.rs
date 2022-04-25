@@ -7,23 +7,23 @@ use crate::instructions::Run;
 
 pub struct Memory {
   pub data: Vec<Wrapping<u8>>,
-  ptr: i32,
+  ptr: Wrapping<usize>,
 }
 
 impl Memory {
   pub fn new(size: usize) -> Self {
     Self {
       data: vec![Wrapping(0); size],
-      ptr: 0,
+      ptr: Wrapping(0),
     }
   }
 
-  pub fn get(&self) -> Wrapping<u8> {
-    self.data[self.ptr as usize]
+  pub fn get(&self) -> u8 {
+    self.data[self.ptr.0].0
   }
 
   pub fn set(&mut self, value: u8) {
-    self.data[self.ptr as usize] = Wrapping(value);
+    self.data[self.ptr.0] = Wrapping(value);
   }
 
   pub fn modify_run(&mut self, data: &Run) {
@@ -33,7 +33,7 @@ impl Memory {
       data,
     } = data;
 
-    let ptr = (self.ptr + offset) as usize;
+    let ptr = (self.ptr + offset).0;
 
     let resulting_len = ptr + data.len();
     if resulting_len > self.data.len() {
@@ -47,15 +47,13 @@ impl Memory {
     self.shift(*shift);
   }
 
-  pub fn shift(&mut self, delta: i32) {
-    if delta > 0 {
-      let resulting_len = (self.ptr + delta + 1) as usize;
-      if resulting_len > self.data.len() {
-        self.data.resize(resulting_len, Wrapping(0));
-      }
-    }
-
+  pub fn shift(&mut self, delta: Wrapping<usize>) {
     self.ptr += delta;
+
+    let current_len = self.ptr.0 + 1;
+    if current_len > self.data.len() {
+      self.data.resize(current_len, Wrapping(0));
+    }
   }
 
   pub fn size(&self) -> usize {

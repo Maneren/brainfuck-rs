@@ -1,8 +1,5 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::cast_precision_loss)]
-#![allow(clippy::cast_sign_loss)]
-#![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_possible_wrap)]
 // credits:
 //   fade - base idea and code
 
@@ -14,13 +11,12 @@ mod parser;
 use std::{
   fs,
   io::{stdin, Read},
-  num::Wrapping,
   path::PathBuf,
   time::Instant,
 };
 
 use clap::Parser;
-use instructions::{Instruction, Run};
+use instructions::Instruction;
 use memory::Memory;
 use optimizations::{link_jumps, optimize};
 
@@ -77,18 +73,9 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
     match op {
       Instruction::ModifyRun(data) => {
         memory.modify_run(data);
-
-        let Run {
-          shift,
-          offset,
-          data,
-        } = data;
-
-        counter += *shift as u64 + *offset as u64 + data.len() as u64;
       }
       Instruction::Print => {
-        print!("{}", memory.get().0 as char);
-        counter += 1;
+        print!("{}", memory.get() as char);
       }
       Instruction::Read => {
         // if stdin empty, use NULL char
@@ -97,29 +84,26 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
           .unwrap_or(Ok(0))
           .expect("Error when reading from stdin");
         memory.set(input);
-        counter += 1;
       }
       Instruction::Clear => memory.set(0),
       Instruction::Shift(amount) => {
         memory.shift(*amount);
-        counter += 1;
       }
       Instruction::JumpIfZero(target) => {
-        if memory.get() == Wrapping(0) {
+        if memory.get() == 0 {
           parsed_index = *target;
         }
-        counter += 1;
       }
       Instruction::JumpIfNonZero(target) => {
-        if memory.get() != Wrapping(0) {
+        if memory.get() != 0 {
           parsed_index = *target;
         }
-        counter += 1;
       }
       _ => unreachable!(),
     }
 
     parsed_index += 1;
+    counter += 1;
   }
 
   counter
