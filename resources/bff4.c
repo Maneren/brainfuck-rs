@@ -138,8 +138,8 @@ int consume(Instruction *instruction)
 
 int main()
 {
-  Instruction *instruction_array = 0, *current_instruction, *instruction_array_end;
-  int instruction_array_length = 0, i, *memory, memory_pointer, memory_size;
+  Instruction *instruction_array = 0, *instruction_array_end;
+  int instruction_array_length = 0, i;
   int current_char = load_next_char();
 
   for (;; instruction_array_length++)
@@ -187,8 +187,22 @@ int main()
 
   for (i = 0; i < instruction_array_length; i++)
   {
+    Instruction *current = instruction_array + i;
     // link jumps together
-    instruction_array[i].go = &instruction_array[instruction_array[i].index_go];
+    current->go = &instruction_array[current->index_go];
+
+    if (current->c == '[' && current->index_go == i + 1 && current->shift == 0 && current->offset <= 0)
+    {
+      current->linear = -current->d[-current->offset];
+      printf("linear: %d\n", current->linear);
+      if (current->linear < 0)
+      {
+        printf("Warning: infinite loop ");
+        printop(current);
+        printf("linear=%d\n", current->linear);
+        current->linear = 0;
+      }
+    }
   }
 
   /*  for (size_t i = 0; i < instruction_array_length; i++)
@@ -196,11 +210,11 @@ int main()
       printop(instruction_array + i);
       } */
 
-  memory_size = 1000; /* any number */
-  memory = resize_int_array(0, memory_size, 0);
-  memory_pointer = 0;
+  int memory_size = 1000; /* any number */
+  int *memory = resize_int_array(0, memory_size, 0);
+  int memory_pointer = 0;
 
-  current_instruction = instruction_array;
+  Instruction *current_instruction = instruction_array;
   instruction_array_end = instruction_array + instruction_array_length;
 
   // run
@@ -240,8 +254,19 @@ int main()
         memory_size = nmsz;
       }
 
-      for (i = 0; i < current_instruction->d_length; i++)
-        memory[memory_pointer + current_instruction->offset + i] += current_instruction->d[i];
+      if (current_instruction->linear)
+      {
+        int del = memory[memory_pointer] / current_instruction->linear;
+        for (i = 0; i < current_instruction->d_length; i++)
+        {
+          memory[memory_pointer + current_instruction->offset + i] += del * current_instruction->d[i];
+        }
+      }
+      else
+      {
+        for (i = 0; i < current_instruction->d_length; i++)
+          memory[memory_pointer + current_instruction->offset + i] += current_instruction->d[i];
+      }
     }
 
     if (current_instruction->shift > 0)
