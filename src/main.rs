@@ -1,5 +1,8 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::cast_precision_loss)]
+#![allow(clippy::cast_sign_loss)]
+#![allow(clippy::cast_possible_truncation)]
+#![allow(clippy::cast_possible_wrap)]
 // credits:
 //   fade - base idea and code
 
@@ -48,6 +51,8 @@ fn main() {
 
   let (instructions, compiled) = measure_time!({ generate_instructions(&program) });
 
+  dbg!(&instructions);
+
   let mut memory = create_memory(args.memory_size);
 
   let (ops, executed) = measure_time!({ run(&mut memory, &instructions) });
@@ -73,6 +78,9 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
     match op {
       Instruction::ModifyRun(data) => {
         memory.modify_run(data);
+      }
+      Instruction::LinearLoop(data) => {
+        memory.apply_linear_loop(data);
       }
       Instruction::Print => {
         print!("{}", memory.get() as char);

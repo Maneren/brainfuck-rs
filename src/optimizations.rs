@@ -3,9 +3,9 @@ use std::{collections::VecDeque, num::Wrapping};
 use crate::instructions::{
   Instruction::{
     self, BlockEnd, BlockStart, Clear, Decrement, Increment, JumpIfNonZero, JumpIfZero, Left,
-    ModifyRun, Right, Shift,
+    LinearLoop, ModifyRun, Right, Shift,
   },
-  Run,
+  Loop, Run,
 };
 
 pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
@@ -38,7 +38,9 @@ pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
 
 pub fn optimize(source: &[Instruction]) -> Vec<Instruction> {
   let first_stage = optimize_clear_loops(source);
-  compress_runs(&first_stage)
+  let second_stage = compress_runs(&first_stage);
+  // optimize_linear_loops(&second_stage)
+  second_stage
 }
 
 fn optimize_clear_loops(source: &[Instruction]) -> Vec<Instruction> {
@@ -68,7 +70,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
       Increment | Decrement | Right | Left => {
         let mut memory_pointer = 0;
 
-        let mut offset = Wrapping(0);
+        let mut offset = 0;
         let mut data = VecDeque::from([Wrapping(0)]);
 
         while i < source.len() {
@@ -99,7 +101,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
           i += 1;
         }
 
-        let shift = Wrapping(memory_pointer) + offset;
+        let shift = memory_pointer as i32 + offset;
 
         // remove unused data
         while let Some(Wrapping(0)) = data.back() {
@@ -112,7 +114,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
         }
 
         if data.is_empty() {
-          if shift.0 != 0 {
+          if shift != 0 {
             result.push(Shift(shift));
           }
         } else {
@@ -127,6 +129,41 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
       _ => result.push(current.clone()),
     }
 
+    i += 1;
+  }
+  result
+}
+
+fn optimize_linear_loops(source: &[Instruction]) -> Vec<Instruction> {
+  let mut result = Vec::with_capacity(source.len());
+  let mut i = 0;
+  while i < source.len() {
+    match (source.get(i), source.get(i + 1), source.get(i + 2)) {
+      (Some(BlockStart), Some(ModifyRun(run)), Some(BlockEnd)) => {
+        let Run {
+          shift,
+          offset,
+          data,
+        } = run;
+
+        if *shift == 0 && *offset <= 0 {
+          let ln_loop = Loop {
+            data: data.clone(),
+            linear_factor: -(data[(-offset) as usize]),
+          };
+          dbg!(&ln_loop);
+          result.push(LinearLoop(ln_loop));
+        } else {
+          result.push(BlockStart);
+          result.push(ModifyRun(run.clone()));
+          result.push(BlockEnd);
+        }
+        i += 2;
+      }
+      _ => {
+        result.push(source[i].clone());
+      }
+    }
     i += 1;
   }
   result

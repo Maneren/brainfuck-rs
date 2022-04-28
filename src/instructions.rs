@@ -1,13 +1,28 @@
-use std::num::Wrapping;
+use std::{fmt::Debug, num::Wrapping};
 
 #[derive(Debug, Clone)]
 pub struct Run {
-  pub shift: Wrapping<usize>,
-  pub offset: Wrapping<usize>,
+  pub shift: i32,
+  pub offset: i32,
   pub data: Vec<Wrapping<u8>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+pub struct Loop {
+  pub data: Vec<Wrapping<u8>>,
+  pub linear_factor: Wrapping<u8>,
+}
+
+impl Debug for Loop {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("Loop")
+      .field("data", &self.data)
+      .field("linear_factor", &self.linear_factor)
+      .finish()
+  }
+}
+
+#[derive(Clone)]
 pub enum Instruction {
   Increment,
   Decrement,
@@ -19,8 +34,30 @@ pub enum Instruction {
   BlockEnd,
 
   Clear,
-  Shift(Wrapping<usize>),
+  Shift(i32),
   JumpIfZero(usize),
   JumpIfNonZero(usize),
   ModifyRun(Run),
+  LinearLoop(Loop),
+}
+
+impl Debug for Instruction {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::Increment => write!(f, "Increment"),
+      Self::Decrement => write!(f, "Decrement"),
+      Self::Right => write!(f, "Right"),
+      Self::Left => write!(f, "Left"),
+      Self::Print => write!(f, "Print"),
+      Self::Read => write!(f, "Read"),
+      Self::BlockStart => write!(f, "BlockStart"),
+      Self::BlockEnd => write!(f, "BlockEnd"),
+      Self::Clear => write!(f, "Clear"),
+      Self::Shift(amount) => write!(f, "Shift({amount})"),
+      Self::JumpIfZero(amount) => write!(f, "JumpIfZero({amount})"),
+      Self::JumpIfNonZero(amount) => write!(f, "JumpIfNonZero({amount})"),
+      Self::ModifyRun(run) => write!(f, "{run:?}"),
+      Self::LinearLoop(r#loop) => write!(f, "{loop:?}"),
+    }
+  }
 }
