@@ -41,6 +41,27 @@ pub enum Instruction {
   LinearLoop(Loop),
 }
 
+impl Instruction {
+  pub fn index(&self) -> usize {
+    match self {
+      Self::Increment => 0,
+      Self::Decrement => 1,
+      Self::Right => 2,
+      Self::Left => 3,
+      Self::Print => 4,
+      Self::Read => 5,
+      Self::BlockStart => 6,
+      Self::BlockEnd => 7,
+      Self::Clear => 8,
+      Self::Shift(_) => 9,
+      Self::JumpIfZero(_) => 10,
+      Self::JumpIfNonZero(_) => 11,
+      Self::ModifyRun(_) => 12,
+      Self::LinearLoop(_) => 13,
+    }
+  }
+}
+
 impl Debug for Instruction {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {

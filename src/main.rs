@@ -14,12 +14,13 @@ mod parser;
 use std::{
   fs,
   io::{stdin, Read},
+  num::Wrapping,
   path::PathBuf,
   time::Instant,
 };
 
 use clap::Parser;
-use instructions::Instruction;
+use instructions::{Instruction, Loop, Run};
 use memory::Memory;
 use optimizations::{link_jumps, optimize};
 
@@ -62,7 +63,7 @@ fn main() {
   println!();
   println!("Compiled in {compiled:?}");
   println!("Executed in {executed:?} ({ops_per_second:.2}M ops/s)");
-  println!("Peak memory usage: {}", memory.size());
+  println!("Peak memory usage: {}", memory.data.len());
 }
 
 fn generate_instructions(source: &str) -> Vec<Instruction> {
@@ -74,13 +75,52 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
   let mut parsed_index = 0usize;
   let mut counter = 0;
 
+  let mut stats = vec![0u64; 14];
+
   while let Some(op) = instructions.get(parsed_index) {
+    stats[op.index()] += 1;
+
     match op {
-      Instruction::ModifyRun(data) => {
-        memory.modify_run(data);
+      Instruction::ModifyRun(Run {
+        shift,
+        offset,
+        data,
+      }) => {
+        let ptr = (memory.ptr + Wrapping(*offset as usize)).0;
+
+        memory.check_length(ptr + data.len());
+
+        data.iter().enumerate().for_each(|(i, value)| {
+          memory.data[ptr + i] += value;
+        });
+
+        memory.shift(*shift);
       }
-      Instruction::LinearLoop(data) => {
-        memory.apply_linear_loop(data);
+      Instruction::LinearLoop(Loop {
+        data,
+        linear_factor,
+      }) => {
+        let ptr = memory.ptr.0;
+
+        memory.check_length(ptr + data.len());
+
+        let factor = {
+          let mut tmp = Wrapping(memory.get());
+          let mut i = Wrapping(0);
+
+          while tmp.0 != 0 {
+            tmp -= linear_factor;
+            i += 1;
+          }
+
+          i
+        };
+
+        data
+          .iter()
+          .map(|value| value * factor)
+          .enumerate()
+          .for_each(|(i, value)| memory.data[ptr + i] += value);
       }
       Instruction::Print => {
         print!("{}", memory.get() as char);
@@ -113,6 +153,8 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
     parsed_index += 1;
     counter += 1;
   }
+
+  println!("stats: {:?}", stats);
 
   counter
 }
