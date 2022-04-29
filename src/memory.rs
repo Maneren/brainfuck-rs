@@ -35,8 +35,6 @@ impl Memory {
 
     self.check_length(self.ptr.0 + 1);
   }
-
-  
 }
 
 impl Debug for Memory {

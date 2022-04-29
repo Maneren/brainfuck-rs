@@ -34,7 +34,7 @@ void *resize_array(void *pointer, int new_size, int original_size)
 
 void printop(Instruction *z)
 {
-  printf("op: c=%c, d='", z->c);
+  printf("op: c=%c, db='", z->c);
 
   /* if (!strchr("<>+-", z->c))
      printf("%c", (char)z->c); */
@@ -42,7 +42,12 @@ void printop(Instruction *z)
   for (int i = 0; i < z->db_length; i++)
     printf("%c", (char)z->db[i]);
 
-  printf("' shift=%d offset=%d index_go=%d db=[ ", z->shift, z->offset, z->index_go);
+  printf("' shift=%d offset=%d index_go=%d ", z->shift, z->offset, z->index_go);
+
+  if (z->linear)
+    printf("linear=%d ", z->linear);
+
+  printf("d=[ ");
 
   for (int i = 0; i < z->d_length; i++)
     printf("%d ", z->d[i]);
@@ -185,7 +190,7 @@ int main()
     current_char = consume(instruction_array + instruction_array_length);
   }
 
-  for (i = 0; i < instruction_array_length; i++)
+  for (int i = 0; i < instruction_array_length; i++)
   {
     Instruction *current = instruction_array + i;
     // link jumps together
@@ -194,7 +199,6 @@ int main()
     if (current->c == '[' && current->index_go == i + 1 && current->shift == 0 && current->offset <= 0)
     {
       current->linear = -current->d[-current->offset];
-      printf("linear: %d\n", current->linear);
       if (current->linear < 0)
       {
         printf("Warning: infinite loop ");
@@ -206,9 +210,9 @@ int main()
   }
 
   /*  for (size_t i = 0; i < instruction_array_length; i++)
-      {
-      printop(instruction_array + i);
-      } */
+   {
+     printop(instruction_array + i);
+   } */
 
   int memory_size = 1000; /* any number */
   int *memory = resize_int_array(0, memory_size, 0);
@@ -256,15 +260,30 @@ int main()
 
       if (current_instruction->linear)
       {
-        int del = memory[memory_pointer] / current_instruction->linear;
-        for (i = 0; i < current_instruction->d_length; i++)
+        int del = 0;
+
+        int tmp = memory[memory_pointer];
+
+        while (tmp != 0)
         {
-          memory[memory_pointer + current_instruction->offset + i] += del * current_instruction->d[i];
+          tmp -= current_instruction->linear;
+          del += 1;
+        }
+
+        // int del = memory[memory_pointer] / current_instruction->linear;
+
+        // printf("del=%d\n", del);
+
+        for (int i = 0; i < current_instruction->d_length; i++)
+        {
+          int val = del * current_instruction->d[i];
+          // printf("%d: %d => %d\n", i, current_instruction->d[i], val);
+          memory[memory_pointer + current_instruction->offset + i] += val;
         }
       }
       else
       {
-        for (i = 0; i < current_instruction->d_length; i++)
+        for (int i = 0; i < current_instruction->d_length; i++)
           memory[memory_pointer + current_instruction->offset + i] += current_instruction->d[i];
       }
     }

@@ -1,27 +1,5 @@
 use std::{fmt::Debug, num::Wrapping};
 
-#[derive(Debug, Clone)]
-pub struct Run {
-  pub shift: i32,
-  pub offset: i32,
-  pub data: Vec<Wrapping<u8>>,
-}
-
-#[derive(Clone)]
-pub struct Loop {
-  pub data: Vec<Wrapping<u8>>,
-  pub linear_factor: Wrapping<u8>,
-}
-
-impl Debug for Loop {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("Loop")
-      .field("data", &self.data)
-      .field("linear_factor", &self.linear_factor)
-      .finish()
-  }
-}
-
 #[derive(Clone)]
 pub enum Instruction {
   Increment,
@@ -37,8 +15,16 @@ pub enum Instruction {
   Shift(i32),
   JumpIfZero(usize),
   JumpIfNonZero(usize),
-  ModifyRun(Run),
-  LinearLoop(Loop),
+  ModifyRun {
+    shift: i32,
+    offset: i32,
+    data: Vec<Wrapping<u8>>,
+  },
+  LinearLoop {
+    shift: i32,
+    offset: i32,
+    data: Vec<Wrapping<u8>>,
+  },
 }
 
 impl Instruction {
@@ -56,8 +42,8 @@ impl Instruction {
       Self::Shift(_) => 9,
       Self::JumpIfZero(_) => 10,
       Self::JumpIfNonZero(_) => 11,
-      Self::ModifyRun(_) => 12,
-      Self::LinearLoop(_) => 13,
+      Self::ModifyRun { .. } => 12,
+      Self::LinearLoop { .. } => 13,
     }
   }
 }
@@ -77,8 +63,26 @@ impl Debug for Instruction {
       Self::Shift(amount) => write!(f, "Shift({amount})"),
       Self::JumpIfZero(amount) => write!(f, "JumpIfZero({amount})"),
       Self::JumpIfNonZero(amount) => write!(f, "JumpIfNonZero({amount})"),
-      Self::ModifyRun(run) => write!(f, "{run:?}"),
-      Self::LinearLoop(r#loop) => write!(f, "{loop:?}"),
+      Self::ModifyRun {
+        shift,
+        offset,
+        data,
+      } => f
+        .debug_struct("ModifyRun")
+        .field("shift", shift)
+        .field("offset", offset)
+        .field("data", data)
+        .finish(),
+      Self::LinearLoop {
+        shift,
+        offset,
+        data,
+      } => f
+        .debug_struct("LinearLoop")
+        .field("shift", shift)
+        .field("offset", offset)
+        .field("data", data)
+        .finish(),
     }
   }
 }

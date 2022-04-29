@@ -20,7 +20,7 @@ use std::{
 };
 
 use clap::Parser;
-use instructions::{Instruction, Loop, Run};
+use instructions::Instruction;
 use memory::Memory;
 use optimizations::{link_jumps, optimize};
 
@@ -52,7 +52,9 @@ fn main() {
 
   let (instructions, compiled) = measure_time!({ generate_instructions(&program) });
 
-  dbg!(&instructions);
+  /* for x in &instructions {
+    println!("{x:?}");
+  } */
 
   let mut memory = create_memory(args.memory_size);
 
@@ -81,46 +83,43 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
     stats[op.index()] += 1;
 
     match op {
-      Instruction::ModifyRun(Run {
+      Instruction::ModifyRun {
         shift,
         offset,
         data,
-      }) => {
-        let ptr = (memory.ptr + Wrapping(*offset as usize)).0;
-
-        memory.check_length(ptr + data.len());
-
-        data.iter().enumerate().for_each(|(i, value)| {
-          memory.data[ptr + i] += value;
-        });
-
-        memory.shift(*shift);
-      }
-      Instruction::LinearLoop(Loop {
+      } => modify_run(memory, *offset, data, *shift),
+      Instruction::LinearLoop {
+        shift,
+        offset,
         data,
-        linear_factor,
-      }) => {
+      } if *shift == 0 && *offset <= 0 => {
         let ptr = memory.ptr.0;
-
         memory.check_length(ptr + data.len());
 
-        let factor = {
-          let mut tmp = Wrapping(memory.get());
-          let mut i = Wrapping(0);
+        let linearity_factor = -data[(-offset) as usize];
+        let factor = memory.data[ptr] / linearity_factor;
+        let is_exact = memory.data[ptr] % linearity_factor == Wrapping(0);
 
-          while tmp.0 != 0 {
-            tmp -= linear_factor;
-            i += 1;
+        if is_exact {
+          data
+            .iter()
+            .map(|value| value * factor)
+            .enumerate()
+            .for_each(|(i, value)| {
+              memory.data[ptr + i] += value;
+            });
+        } else {
+          while memory.get() != 0 {
+            modify_run(memory, *offset, data, *shift);
           }
-
-          i
-        };
-
-        data
-          .iter()
-          .map(|value| value * factor)
-          .enumerate()
-          .for_each(|(i, value)| memory.data[ptr + i] += value);
+        }
+      }
+      Instruction::LinearLoop {
+        shift,
+        offset,
+        data,
+      } => {
+        modify_run(memory, *offset, data, *shift);
       }
       Instruction::Print => {
         print!("{}", memory.get() as char);
@@ -157,6 +156,16 @@ fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
   println!("stats: {:?}", stats);
 
   counter
+}
+
+fn modify_run(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
+  let ptr = (memory.ptr + Wrapping(offset as usize)).0;
+  memory.check_length(ptr + data.len());
+
+  data.iter().enumerate().for_each(|(i, value)| {
+    memory.data[ptr + i] += value;
+  });
+  memory.shift(shift);
 }
 
 fn create_memory(memory_size: Option<String>) -> Memory {
