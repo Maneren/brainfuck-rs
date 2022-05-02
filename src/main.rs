@@ -21,7 +21,7 @@ use std::{
 
 use clap::Parser;
 use instructions::Instruction;
-use optimizations::{link_jumps, optimize};
+use optimizations::{collect_loops, optimize};
 
 use crate::interpret::interpret;
 
@@ -55,17 +55,15 @@ fn main() {
 
   let memory_size = parse_memory_size(args.memory_size);
 
-  let (ops, executed) = measure_time!({ interpret(&instructions, stdin(), stdout(), memory_size) });
-
-  let ops_per_second = ops as f64 / executed.as_secs_f64() / 1_000_000_f64;
+  let (.., executed) = measure_time!({ interpret(&instructions, stdin(), stdout(), memory_size) });
 
   println!();
   println!("Compiled in {compiled:?}");
-  println!("Executed in {executed:?} ({ops_per_second:.2}M ops/s)");
+  println!("Executed in {executed:?}");
 }
 
 fn generate_instructions(source: &str) -> Vec<Instruction> {
-  link_jumps(&optimize(&parser::parse(source)))
+  collect_loops(&optimize(&parser::parse(source)))
 }
 
 fn parse_memory_size(memory_size: Option<String>) -> usize {

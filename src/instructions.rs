@@ -1,6 +1,6 @@
 use std::{fmt::Debug, num::Wrapping};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Instruction {
   Increment,
   Decrement,
@@ -13,8 +13,6 @@ pub enum Instruction {
 
   Clear,
   Shift(i32),
-  JumpIfZero(usize),
-  JumpIfNonZero(usize),
   ModifyRun {
     shift: i32,
     offset: i32,
@@ -29,6 +27,9 @@ pub enum Instruction {
     shift: i32,
     offset: i32,
     data: Vec<Wrapping<u8>>,
+  },
+  Loop {
+    instructions: Vec<Instruction>,
   },
 }
 
@@ -45,8 +46,6 @@ impl Debug for Instruction {
       Self::BlockEnd => write!(f, "BlockEnd"),
       Self::Clear => write!(f, "Clear"),
       Self::Shift(amount) => write!(f, "Shift({amount})"),
-      Self::JumpIfZero(amount) => write!(f, "JumpIfZero({amount})"),
-      Self::JumpIfNonZero(amount) => write!(f, "JumpIfNonZero({amount})"),
       Self::ModifyRun {
         shift,
         offset,
@@ -55,7 +54,7 @@ impl Debug for Instruction {
         .debug_struct("ModifyRun")
         .field("shift", shift)
         .field("offset", offset)
-        .field("data", data)
+        .field("data", &format!("{data:?}"))
         .finish(),
       Self::SimpleLoop {
         shift,
@@ -65,7 +64,7 @@ impl Debug for Instruction {
         .debug_struct("SimpleLoop")
         .field("shift", shift)
         .field("offset", offset)
-        .field("data", data)
+        .field("data", &format!("{data:?}"))
         .finish(),
       Self::LinearLoop {
         offset,
@@ -75,8 +74,9 @@ impl Debug for Instruction {
         .debug_struct("LinearLoop")
         .field("linearity_factor", linearity_factor)
         .field("offset", offset)
-        .field("data", data)
+        .field("data", &format!("{data:?}"))
         .finish(),
+      Self::Loop { instructions } => f.debug_list().entries(instructions).finish(),
     }
   }
 }

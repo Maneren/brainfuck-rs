@@ -1,34 +1,50 @@
 use std::{collections::VecDeque, num::Wrapping};
 
 use crate::instructions::Instruction::{
-  self, BlockEnd, BlockStart, Clear, Decrement, Increment, JumpIfNonZero, JumpIfZero, Left,
-  LinearLoop, ModifyRun, Right, Shift, SimpleLoop,
+  self, BlockEnd, BlockStart, Clear, Decrement, Increment, Left, LinearLoop, Loop, ModifyRun,
+  Right, Shift, SimpleLoop,
 };
 
-pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
+pub fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
   let mut result = Vec::with_capacity(input.len());
-  let mut left_indexes = Vec::new();
+  let mut buffer = Vec::new();
 
-  for (i, instruction) in input.iter().enumerate() {
+  let mut level = 0;
+
+  for instruction in input {
     match instruction {
       BlockStart => {
-        left_indexes.push(i);
-        result.push(BlockStart);
+        level += 1;
+
+        if level > 1 {
+          buffer.push(BlockStart);
+        }
       }
       BlockEnd => {
-        let left = match left_indexes.pop() {
-          Some(val) => val,
-          None => panic!("Unmatched closing bracket!"),
-        };
+        level -= 1;
 
-        result[left] = JumpIfZero(i);
-        result.push(JumpIfNonZero(left));
+        if level == 0 {
+          if !buffer.is_empty() {
+            result.push(Loop {
+              instructions: collect_loops(&buffer),
+            });
+            buffer.clear();
+          }
+        } else {
+          buffer.push(BlockEnd);
+        }
       }
-      instruction => result.push(instruction.clone()),
+      _ => {
+        if level == 0 {
+          result.push(instruction.clone());
+        } else {
+          buffer.push(instruction.clone());
+        }
+      }
     }
   }
 
-  assert!(left_indexes.is_empty(), "Unmatched opening bracket!");
+  assert!(level == 0, "Unbalanced brackets");
 
   result
 }
@@ -36,8 +52,7 @@ pub fn link_jumps(input: &[Instruction]) -> Vec<Instruction> {
 pub fn optimize(source: &[Instruction]) -> Vec<Instruction> {
   let instructions = optimize_clear_loops(source);
   let instructions = compress_runs(&instructions);
-  let instructions = optimize_loops(&instructions);
-  remove_dead_code(&instructions)
+  optimize_loops(&instructions)
 }
 
 fn optimize_clear_loops(source: &[Instruction]) -> Vec<Instruction> {
@@ -160,25 +175,6 @@ fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
         }
 
         i += 2;
-      }
-      _ => {
-        result.push(source[i].clone());
-      }
-    }
-    i += 1;
-  }
-
-  result
-}
-
-fn remove_dead_code(source: &[Instruction]) -> Vec<Instruction> {
-  let mut result = Vec::with_capacity(source.len());
-
-  let mut i = 0;
-  while i < source.len() {
-    match (source.get(i), source.get(i + 1)) {
-      (Some(BlockStart), Some(BlockEnd)) => {
-        i += 1;
       }
       _ => {
         result.push(source[i].clone());

@@ -1,5 +1,5 @@
 use std::{
-  io::{Read, Write},
+  io::{Bytes, Read, Write},
   num::Wrapping,
 };
 
@@ -10,18 +10,24 @@ pub fn interpret(
   input: impl Read,
   output: impl Write,
   memory_size: usize,
-) -> u64 {
+) {
   let mut memory = Memory::new(memory_size);
 
   let mut input = input.bytes();
   let mut output = output;
 
+  _interpret(instructions, &mut input, &mut output, &mut memory);
+}
+
+fn _interpret(
+  instructions: &[Instruction],
+  reader: &mut Bytes<impl Read>,
+  writer: &mut impl Write,
+  memory: &mut Memory,
+) {
   let mut parsed_index = 0usize;
-  let mut counter = 0;
 
   while let Some(op) = instructions.get(parsed_index) {
-    counter += 1;
-
     match op {
       Instruction::LinearLoop {
         offset,
@@ -51,7 +57,7 @@ pub fn interpret(
               memory[ptr + Wrapping(i)] += value;
             });
         } else {
-          apply_simple_loop(&mut memory, *offset, data, 0);
+          apply_simple_loop(memory, *offset, data, 0);
         }
       }
       Instruction::SimpleLoop {
@@ -63,34 +69,28 @@ pub fn interpret(
 
         memory.check_length(last_ptr);
 
-        apply_simple_loop(&mut memory, *offset, data, *shift);
+        apply_simple_loop(memory, *offset, data, *shift);
+      }
+      Instruction::Loop { instructions } => {
+        while memory.get() != 0 {
+          _interpret(instructions, reader, writer, memory);
+        }
       }
       Instruction::ModifyRun {
         shift,
         offset,
         data,
-      } => modify_run(&mut memory, *offset, data, *shift),
-      Instruction::Print => output.write_all(&[memory.get()]).expect("Could not output"),
-      Instruction::Read => read_char(&mut input, &mut memory),
+      } => modify_run(memory, *offset, data, *shift),
+      Instruction::Print => writer.write_all(&[memory.get()]).expect("Could not output"),
+      Instruction::Read => read_char(reader, memory),
       Instruction::Clear => memory.set(0),
       Instruction::Shift(amount) => memory.shift(*amount),
-      Instruction::JumpIfZero(target) => {
-        if memory.get() == 0 {
-          parsed_index = *target;
-        }
-      }
-      Instruction::JumpIfNonZero(target) => {
-        if memory.get() != 0 {
-          parsed_index = *target;
-        }
-      }
-      _ => unreachable!(),
+
+      _ => unreachable!("{op:?}"),
     }
 
     parsed_index += 1;
   }
-
-  counter
 }
 
 fn apply_simple_loop(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
