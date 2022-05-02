@@ -7,22 +7,23 @@
 //   fade - base idea and code
 
 mod instructions;
+mod interpret;
 mod memory;
 mod optimizations;
 mod parser;
 
 use std::{
   fs,
-  io::{stdin, Read},
-  num::Wrapping,
+  io::{stdin, stdout},
   path::PathBuf,
   time::Instant,
 };
 
 use clap::Parser;
 use instructions::Instruction;
-use memory::Memory;
 use optimizations::{link_jumps, optimize};
+
+use crate::interpret::interpret;
 
 #[derive(Parser)]
 #[clap(author, version, about)]
@@ -56,120 +57,23 @@ fn main() {
     println!("{x:?}");
   } */
 
-  let mut memory = create_memory(args.memory_size);
+  let memory_size = parse_memory_size(args.memory_size);
 
-  let (ops, executed) = measure_time!({ run(&mut memory, &instructions) });
+  let (ops, executed) = measure_time!({ interpret(&instructions, stdin(), stdout(), memory_size) });
 
   let ops_per_second = ops as f64 / executed.as_secs_f64() / 1_000_000_f64;
 
   println!();
   println!("Compiled in {compiled:?}");
   println!("Executed in {executed:?} ({ops_per_second:.2}M ops/s)");
-  println!("Peak memory usage: {}", memory.data.len());
 }
 
 fn generate_instructions(source: &str) -> Vec<Instruction> {
   link_jumps(&optimize(&parser::parse(source)))
 }
 
-fn run(memory: &mut Memory, instructions: &[Instruction]) -> u64 {
-  let mut stdin = stdin().bytes();
-  let mut parsed_index = 0usize;
-  let mut counter = 0;
-
-  let mut stats = vec![0u64; 14];
-
-  while let Some(op) = instructions.get(parsed_index) {
-    stats[op.index()] += 1;
-
-    match op {
-      Instruction::ModifyRun {
-        shift,
-        offset,
-        data,
-      } => modify_run(memory, *offset, data, *shift),
-      Instruction::LinearLoop {
-        shift,
-        offset,
-        data,
-      } if *shift == 0 && *offset <= 0 => {
-        let ptr = memory.ptr.0;
-        memory.check_length(ptr + data.len());
-
-        let linearity_factor = -data[(-offset) as usize];
-        let factor = memory.data[ptr] / linearity_factor;
-        let is_exact = memory.data[ptr] % linearity_factor == Wrapping(0);
-
-        if is_exact {
-          data
-            .iter()
-            .map(|value| value * factor)
-            .enumerate()
-            .for_each(|(i, value)| {
-              memory.data[ptr + i] += value;
-            });
-        } else {
-          while memory.get() != 0 {
-            modify_run(memory, *offset, data, *shift);
-          }
-        }
-      }
-      Instruction::LinearLoop {
-        shift,
-        offset,
-        data,
-      } => {
-        modify_run(memory, *offset, data, *shift);
-      }
-      Instruction::Print => {
-        print!("{}", memory.get() as char);
-      }
-      Instruction::Read => {
-        // if stdin empty, use NULL char
-        let input = stdin
-          .next()
-          .unwrap_or(Ok(0))
-          .expect("Error when reading from stdin");
-        memory.set(input);
-      }
-      Instruction::Clear => memory.set(0),
-      Instruction::Shift(amount) => {
-        memory.shift(*amount);
-      }
-      Instruction::JumpIfZero(target) => {
-        if memory.get() == 0 {
-          parsed_index = *target;
-        }
-      }
-      Instruction::JumpIfNonZero(target) => {
-        if memory.get() != 0 {
-          parsed_index = *target;
-        }
-      }
-      _ => unreachable!(),
-    }
-
-    parsed_index += 1;
-    counter += 1;
-  }
-
-  println!("stats: {:?}", stats);
-
-  counter
-}
-
-fn modify_run(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
-  let ptr = (memory.ptr + Wrapping(offset as usize)).0;
-  memory.check_length(ptr + data.len());
-
-  data.iter().enumerate().for_each(|(i, value)| {
-    memory.data[ptr + i] += value;
-  });
-  memory.shift(shift);
-}
-
-fn create_memory(memory_size: Option<String>) -> Memory {
-  let size = memory_size.map_or(256, |input| {
+fn parse_memory_size(memory_size: Option<String>) -> usize {
+  memory_size.map_or(256, |input| {
     let number = input
       .chars()
       .take_while(|c| c.is_digit(10))
@@ -186,7 +90,5 @@ fn create_memory(memory_size: Option<String>) -> Memory {
     };
 
     (number * unit) as usize
-  });
-
-  Memory::new(size)
+  })
 }

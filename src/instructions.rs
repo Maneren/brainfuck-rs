@@ -21,6 +21,11 @@ pub enum Instruction {
     data: Vec<Wrapping<u8>>,
   },
   LinearLoop {
+    offset: i32,
+    linearity_factor: Wrapping<u8>,
+    data: Vec<Wrapping<u8>>,
+  },
+  SimpleLoop {
     shift: i32,
     offset: i32,
     data: Vec<Wrapping<u8>>,
@@ -43,7 +48,8 @@ impl Instruction {
       Self::JumpIfZero(_) => 10,
       Self::JumpIfNonZero(_) => 11,
       Self::ModifyRun { .. } => 12,
-      Self::LinearLoop { .. } => 13,
+      Self::SimpleLoop { .. } => 13,
+      Self::LinearLoop { .. } => 14,
     }
   }
 }
@@ -73,13 +79,23 @@ impl Debug for Instruction {
         .field("offset", offset)
         .field("data", data)
         .finish(),
-      Self::LinearLoop {
+      Self::SimpleLoop {
         shift,
         offset,
         data,
       } => f
-        .debug_struct("LinearLoop")
+        .debug_struct("SimpleLoop")
         .field("shift", shift)
+        .field("offset", offset)
+        .field("data", data)
+        .finish(),
+      Self::LinearLoop {
+        offset,
+        linearity_factor,
+        data,
+      } => f
+        .debug_struct("LinearLoop")
+        .field("linearity_factor", linearity_factor)
         .field("offset", offset)
         .field("data", data)
         .finish(),
