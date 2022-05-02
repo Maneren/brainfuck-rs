@@ -53,10 +53,6 @@ fn main() {
 
   let (instructions, compiled) = measure_time!({ generate_instructions(&program) });
 
-  /* for x in &instructions {
-    println!("{x:?}");
-  } */
-
   let memory_size = parse_memory_size(args.memory_size);
 
   let (ops, executed) = measure_time!({ interpret(&instructions, stdin(), stdout(), memory_size) });

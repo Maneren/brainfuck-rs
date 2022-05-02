@@ -19,10 +19,7 @@ pub fn interpret(
   let mut parsed_index = 0usize;
   let mut counter = 0;
 
-  let mut stats = vec![0u64; 15];
-
   while let Some(op) = instructions.get(parsed_index) {
-    //  stats[op.index()] += 1;
     counter += 1;
 
     match op {
@@ -92,8 +89,6 @@ pub fn interpret(
 
     parsed_index += 1;
   }
-
-  println!("stats: {:?}", stats);
 
   counter
 }
