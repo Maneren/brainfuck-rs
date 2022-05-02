@@ -26,16 +26,16 @@ impl Memory {
     self.data[self.ptr.0] = Wrapping(value);
   }
 
-  pub fn check_length(&mut self, length: usize) {
-    if length > self.data.len() {
-      self.data.resize(length, Wrapping(0));
+  pub fn check_length(&mut self, length: Wrapping<usize>) {
+    if length.0 > self.data.len() {
+      self.data.resize(length.0, Wrapping(0));
     }
   }
 
   pub fn shift(&mut self, delta: i32) {
     self.ptr += delta as usize;
 
-    self.check_length(self.ptr.0 + 1);
+    self.check_length(self.ptr + Wrapping(1));
   }
 }
 

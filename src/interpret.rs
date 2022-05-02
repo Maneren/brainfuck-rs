@@ -22,7 +22,8 @@ pub fn interpret(
   let mut stats = vec![0u64; 15];
 
   while let Some(op) = instructions.get(parsed_index) {
-    stats[op.index()] += 1;
+    //  stats[op.index()] += 1;
+    counter += 1;
 
     match op {
       Instruction::LinearLoop {
@@ -30,53 +31,40 @@ pub fn interpret(
         linearity_factor,
         data,
       } => {
-        let ptr = (memory.ptr - Wrapping(*offset as usize)).0;
-        memory.check_length(ptr + data.len());
+        if memory.get() == 0 {
+          parsed_index += 1;
+          continue;
+        }
+
+        let mut ptr = memory.ptr;
 
         let factor = memory[ptr] / linearity_factor;
         let is_exact = memory[ptr] % linearity_factor == Wrapping(0);
 
-        let cpy = (memory.clone(), factor, memory[ptr]);
-        let mut mem2 = memory.clone();
-        data
-          .iter()
-          .map(|value| value * factor)
-          .enumerate()
-          .for_each(|(i, value)| {
-            mem2[ptr + i] += value;
-          });
+        ptr += *offset as usize;
 
-        apply_simple_loop(&mut memory, *offset, data, 0);
+        memory.check_length(ptr + Wrapping(data.len()));
 
         if is_exact {
-          for (i, (a, b)) in memory.data.iter().zip(mem2.data.iter()).enumerate() {
-            if a != b {
-              println!("{} {} {}", i, a, b);
-              println!("{:?}\n{:?}", memory, mem2,);
-              let (mem_cpy, factor, value) = cpy;
-              panic!("\n{:?}\nop: {:?}\n{} {}", mem_cpy, op, factor, value)
-            }
-          }
-        }
-
-        /*  if is_exact {
           data
             .iter()
             .map(|value| value * factor)
             .enumerate()
             .for_each(|(i, value)| {
-              memory[ptr + i] += value;
+              memory[ptr + Wrapping(i)] += value;
             });
         } else {
           apply_simple_loop(&mut memory, *offset, data, 0);
-        } */
+        }
       }
       Instruction::SimpleLoop {
         shift,
         offset,
         data,
       } => {
-        memory.check_length(memory.ptr.0 + *offset as usize + data.len());
+        let last_ptr = memory.ptr + Wrapping(*offset as usize) + Wrapping(data.len());
+
+        memory.check_length(last_ptr);
 
         apply_simple_loop(&mut memory, *offset, data, *shift);
       }
@@ -103,7 +91,6 @@ pub fn interpret(
     }
 
     parsed_index += 1;
-    counter += 1;
   }
 
   println!("stats: {:?}", stats);
@@ -123,15 +110,18 @@ fn read_char(input: &mut std::io::Bytes<impl Read>, memory: &mut Memory) {
     .next()
     .unwrap_or(Ok(0))
     .expect("Error when reading from stdin");
+
   memory.set(input);
 }
 
 fn modify_run(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
-  let ptr = (memory.ptr + Wrapping(offset as usize)).0;
-  memory.check_length(ptr + data.len());
+  let Memory { mut ptr, .. } = memory;
+  ptr += offset as usize;
+
+  memory.check_length(ptr + Wrapping(data.len()));
 
   data.iter().enumerate().for_each(|(i, value)| {
-    memory[ptr + i] += value;
+    memory[ptr + Wrapping(i)] += value;
   });
 
   memory.shift(shift);
