@@ -3,6 +3,7 @@
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_possible_wrap)]
+#![feature(is_some_with)]
 // credits:
 //   fade - base idea and code
 
@@ -14,8 +15,7 @@ mod parser;
 
 use std::{
   fs,
-  io::{stdin, stdout},
-  path::PathBuf,
+  io::{stdin, stdout, Read},
   time::Instant,
 };
 
@@ -29,7 +29,7 @@ use crate::interpret::interpret;
 #[clap(author, version, about)]
 struct Cli {
   /// The brainfuck program file
-  file: PathBuf,
+  file: String,
 
   /// Memory size in bytes. Accepts suffixes B, k, M, G. Leave empty for dynamically allocated, starting at 256B.
   #[clap(short, long)]
@@ -49,9 +49,15 @@ macro_rules! measure_time {
 fn main() {
   let args = Cli::parse();
 
-  let program = fs::read_to_string(args.file).expect("Couldn't read from file!");
-
-  let (instructions, compiled) = measure_time!({ generate_instructions(&program) });
+  let program = if args.file == "-" {
+    stdin()
+      .bytes()
+      .take_while(|b| b.is_ok_and(|&b| b != b'|'))
+      .map(|b| b.unwrap() as char)
+      .collect::<String>()
+  } else {
+    fs::read_to_string(args.file).expect("Couldn't read from file!")
+  };
 
   let memory_size = parse_memory_size(args.memory_size);
 
