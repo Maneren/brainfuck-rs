@@ -25,9 +25,7 @@ fn _interpret(
   writer: &mut impl Write,
   memory: &mut Memory,
 ) {
-  let mut parsed_index = 0usize;
-
-  while let Some(op) = instructions.get(parsed_index) {
+  for op in instructions {
     match op {
       Instruction::LinearLoop {
         offset,
@@ -35,7 +33,6 @@ fn _interpret(
         data,
       } => {
         if memory.get() == 0 {
-          parsed_index += 1;
           continue;
         }
 
@@ -88,8 +85,6 @@ fn _interpret(
 
       _ => unreachable!("{op:?}"),
     }
-
-    parsed_index += 1;
   }
 }
 
@@ -99,7 +94,7 @@ fn apply_simple_loop(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], sh
   }
 }
 
-fn read_char(input: &mut std::io::Bytes<impl Read>, memory: &mut Memory) {
+fn read_char(input: &mut Bytes<impl Read>, memory: &mut Memory) {
   // if stdin empty, use NULL char
   let input = input
     .next()
