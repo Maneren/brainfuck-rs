@@ -26,11 +26,20 @@ pub fn parse(string: &str) -> Vec<Instruction> {
 
 #[cfg(test)]
 mod tests {
+  use super::Instruction::{BlockEnd, BlockStart, Decrement, Increment, Left, Print, Right};
+
   #[test]
   fn parse_simple() {
     let program = "+[------->++<]>--.+++.---.";
     let parsed = super::parse(program);
 
-    println!("{:?}", parsed);
+    assert_eq!(
+      parsed,
+      &[
+        Increment, BlockStart, Decrement, Decrement, Decrement, Decrement, Decrement, Decrement,
+        Decrement, Right, Increment, Increment, Left, BlockEnd, Right, Decrement, Decrement, Print,
+        Increment, Increment, Increment, Print, Decrement, Decrement, Decrement, Print,
+      ]
+    );
   }
 }
