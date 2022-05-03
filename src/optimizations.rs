@@ -2,10 +2,16 @@ use std::{collections::VecDeque, num::Wrapping};
 
 use crate::instructions::Instruction::{
   self, BlockEnd, BlockStart, Clear, Decrement, Increment, Left, LinearLoop, Loop, ModifyRun,
-  Right, Shift, SimpleLoop,
+  Right, SearchLoop, Shift, SimpleLoop,
 };
 
-pub fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
+pub fn optimize(instructions: &[Instruction]) -> Vec<Instruction> {
+  let instructions = &compress_runs(instructions);
+  let instructions = &optimize_small_loops(instructions);
+  collect_loops(instructions)
+}
+
+fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
   let mut result = Vec::with_capacity(input.len());
   let mut buffer = Vec::new();
 
@@ -49,19 +55,53 @@ pub fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
   result
 }
 
-pub fn optimize(source: &[Instruction]) -> Vec<Instruction> {
-  let instructions = optimize_clear_loops(source);
-  let instructions = compress_runs(&instructions);
-  optimize_loops(&instructions)
-}
-
-fn optimize_clear_loops(source: &[Instruction]) -> Vec<Instruction> {
+fn optimize_small_loops(source: &[Instruction]) -> Vec<Instruction> {
   let mut result = Vec::with_capacity(source.len());
   let mut i = 0;
   while i < source.len() {
     match (source.get(i), source.get(i + 1), source.get(i + 2)) {
-      (Some(BlockStart), Some(Increment | Decrement), Some(BlockEnd)) => {
+      (
+        Some(BlockStart),
+        Some(ModifyRun {
+          shift: 0,
+          offset: 0,
+          data,
+        }),
+        Some(BlockEnd),
+      ) if data.len() == 1 => {
         result.push(Clear);
+
+        i += 2;
+      }
+      (Some(BlockStart), Some(Shift(shift)), Some(BlockEnd)) => {
+        result.push(SearchLoop { step: *shift });
+
+        i += 2;
+      }
+      (
+        Some(BlockStart),
+        Some(ModifyRun {
+          shift,
+          offset,
+          data,
+        }),
+        Some(BlockEnd),
+      ) => {
+        if *shift == 0 && *offset <= 0 {
+          let linearity_factor = -data[(-offset) as usize]; // value at offset 0
+          result.push(LinearLoop {
+            offset: *offset,
+            linearity_factor,
+            data: data.clone(),
+          });
+        } else {
+          result.push(SimpleLoop {
+            shift: *shift,
+            offset: *offset,
+            data: data.clone(),
+          });
+        }
+
         i += 2;
       }
       _ => {
@@ -142,46 +182,5 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
 
     i += 1;
   }
-  result
-}
-
-fn optimize_loops(source: &[Instruction]) -> Vec<Instruction> {
-  let mut result = Vec::with_capacity(source.len());
-  let mut i = 0;
-  while i < source.len() {
-    match (source.get(i), source.get(i + 1), source.get(i + 2)) {
-      (
-        Some(BlockStart),
-        Some(ModifyRun {
-          shift,
-          offset,
-          data,
-        }),
-        Some(BlockEnd),
-      ) => {
-        if *shift == 0 && *offset <= 0 {
-          let linearity_factor = -data[(-offset) as usize]; // value at offset 0
-          result.push(LinearLoop {
-            offset: *offset,
-            linearity_factor,
-            data: data.clone(),
-          });
-        } else {
-          result.push(SimpleLoop {
-            shift: *shift,
-            offset: *offset,
-            data: data.clone(),
-          });
-        }
-
-        i += 2;
-      }
-      _ => {
-        result.push(source[i].clone());
-      }
-    }
-    i += 1;
-  }
-
   result
 }

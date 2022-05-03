@@ -28,6 +28,9 @@ pub enum Instruction {
     offset: i32,
     data: Vec<Wrapping<u8>>,
   },
+  SearchLoop {
+    step: i32,
+  },
   Loop {
     instructions: Vec<Instruction>,
   },
@@ -66,6 +69,7 @@ impl Debug for Instruction {
         .field("offset", offset)
         .field("data", &format!("{data:?}"))
         .finish(),
+      Self::SearchLoop { step } => f.debug_struct("SearchLoop").field("step", step).finish(),
       Self::LinearLoop {
         offset,
         linearity_factor,

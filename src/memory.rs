@@ -11,6 +11,7 @@ pub struct Memory {
 }
 
 impl Memory {
+  #[inline]
   pub fn new(size: usize) -> Self {
     Self {
       data: vec![Wrapping(0); size],
@@ -18,10 +19,17 @@ impl Memory {
     }
   }
 
+  #[inline]
   pub fn get(&self) -> u8 {
-    self.data[self.ptr.0].0
+    self.get_raw().0
   }
 
+  #[inline]
+  pub fn get_raw(&self) -> Wrapping<u8> {
+    self.data[self.ptr.0]
+  }
+
+  #[inline]
   pub fn set(&mut self, value: u8) {
     self.data[self.ptr.0] = Wrapping(value);
   }
@@ -32,6 +40,7 @@ impl Memory {
     }
   }
 
+  #[inline]
   pub fn shift(&mut self, delta: i32) {
     self.ptr += delta as usize;
 
@@ -57,13 +66,13 @@ impl Index<Wrapping<usize>> for Memory {
   type Output = Wrapping<u8>;
 
   fn index(&self, index: Wrapping<usize>) -> &Self::Output {
-    &self.data[index.0]
+    &self[index.0]
   }
 }
 
 impl IndexMut<Wrapping<usize>> for Memory {
   fn index_mut(&mut self, index: Wrapping<usize>) -> &mut Self::Output {
-    &mut self.data[index.0]
+    &mut self[index.0]
   }
 }
 

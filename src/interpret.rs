@@ -36,12 +36,10 @@ fn _interpret(
           continue;
         }
 
-        let mut ptr = memory.ptr;
+        let factor = memory.get_raw() / linearity_factor;
+        let is_exact = memory.get_raw() % linearity_factor == Wrapping(0);
 
-        let factor = memory[ptr] / linearity_factor;
-        let is_exact = memory[ptr] % linearity_factor == Wrapping(0);
-
-        ptr += *offset as usize;
+        let ptr = memory.ptr + Wrapping(*offset as usize);
 
         memory.check_length(ptr + Wrapping(data.len()));
 
@@ -54,7 +52,7 @@ fn _interpret(
               memory[ptr + Wrapping(i)] += value;
             });
         } else {
-          apply_simple_loop(memory, *offset, data, 0);
+          simple_loop(memory, *offset, data, 0);
         }
       }
       Instruction::SimpleLoop {
@@ -66,7 +64,12 @@ fn _interpret(
 
         memory.check_length(last_ptr);
 
-        apply_simple_loop(memory, *offset, data, *shift);
+        simple_loop(memory, *offset, data, *shift);
+      }
+      Instruction::SearchLoop { step } => {
+        while memory.get() != 0 {
+          memory.shift(*step);
+        }
       }
       Instruction::Loop { instructions } => {
         while memory.get() != 0 {
@@ -88,7 +91,7 @@ fn _interpret(
   }
 }
 
-fn apply_simple_loop(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
+fn simple_loop(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
   while memory.get() != 0 {
     modify_run(memory, offset, data, shift);
   }
@@ -105,8 +108,7 @@ fn read_char(input: &mut Bytes<impl Read>, memory: &mut Memory) {
 }
 
 fn modify_run(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
-  let Memory { mut ptr, .. } = memory;
-  ptr += offset as usize;
+  let ptr = memory.ptr + Wrapping(offset as usize);
 
   memory.check_length(ptr + Wrapping(data.len()));
 
