@@ -63,7 +63,7 @@ fn main() {
 
   let executed = measure_time!({
     let instructions = generate_instructions(&program);
-
+    // dbg!(&instructions);
     interpret(&instructions, stdin(), stdout(), memory_size);
   });
 

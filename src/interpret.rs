@@ -37,23 +37,31 @@ fn _interpret(
         }
 
         let factor = memory.get_raw() / linearity_factor;
-        let is_exact = memory.get_raw() % linearity_factor == Wrapping(0);
+        let remainder = memory.get_raw() % linearity_factor;
 
         let ptr = memory.ptr + Wrapping(*offset as usize);
 
         memory.check_length(ptr + Wrapping(data.len()));
 
-        if is_exact {
-          data
-            .iter()
-            .map(|value| value * factor)
-            .enumerate()
-            .for_each(|(i, value)| {
-              memory[ptr + Wrapping(i)] += value;
-            });
+        let factor = if remainder == Wrapping(0) {
+          factor
         } else {
-          simple_loop(memory, *offset, data, 0);
-        }
+          let mut tmp = memory.get_raw();
+          let mut i = Wrapping(0);
+          while tmp != Wrapping(0) {
+            tmp -= linearity_factor;
+            i += 1;
+          }
+          i
+        };
+
+        data
+          .iter()
+          .map(|value| value * factor)
+          .enumerate()
+          .for_each(|(i, value)| {
+            memory[ptr + Wrapping(i)] += value;
+          });
       }
       Instruction::SimpleLoop {
         shift,
