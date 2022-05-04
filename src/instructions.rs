@@ -13,6 +13,8 @@ pub enum Instruction {
 
   Clear,
   Shift(i32),
+  Modify(Wrapping<u8>),
+  ModifyOffset(Wrapping<u8>, i32),
   ModifyRun {
     shift: i32,
     offset: i32,
@@ -49,6 +51,8 @@ impl Debug for Instruction {
       Self::BlockEnd => write!(f, "BlockEnd"),
       Self::Clear => write!(f, "Clear"),
       Self::Shift(amount) => write!(f, "Shift({amount})"),
+      Self::Modify(amount) => write!(f, "Modify({amount})"),
+      Self::ModifyOffset(amount, offset) => write!(f, "ModifyOffset({amount}, {offset})"),
       Self::ModifyRun {
         shift,
         offset,
