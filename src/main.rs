@@ -31,7 +31,7 @@ struct Cli {
   /// The brainfuck program file
   file: String,
 
-  /// Memory size in bytes. Accepts suffixes B, k, M, G. Leave empty for dynamically allocated, starting at 256B.
+  /// Starting memory size in bytes. Accepts suffixes B, k, M, G. Default is 256B.
   #[clap(short, long)]
   memory_size: Option<String>,
 }
@@ -52,8 +52,8 @@ fn main() {
   let program = if args.file == "-" {
     stdin()
       .bytes()
-      .take_while(|b| b.is_ok_and(|&b| b != b'|'))
-      .map(|b| b.unwrap() as char)
+      .take_while(|b| matches!(b, Ok(x) if *x != b'|'))
+      .map(|b| b.expect("Error while reading from stdin") as char)
       .collect::<String>()
   } else {
     fs::read_to_string(args.file).expect("Couldn't read from file!")
