@@ -4,6 +4,7 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_possible_wrap)]
 #![feature(is_some_with)]
+#![feature(mixed_integer_ops)]
 // credits:
 //   fade - base idea and code
 
@@ -63,7 +64,7 @@ fn main() {
 
   let executed = measure_time!({
     let instructions = generate_instructions(&program);
-
+    // dbg!(&instructions);
     interpret(&instructions, stdin(), stdout(), memory_size);
   });
 

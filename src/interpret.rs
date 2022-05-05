@@ -39,9 +39,9 @@ fn _interpret(
         let factor = memory.get_raw() / linearity_factor;
         let is_exact = memory.get_raw() % linearity_factor == Wrapping(0);
 
-        let ptr = memory.ptr + Wrapping(*offset as usize);
+        let ptr = memory.ptr + *offset as usize;
 
-        memory.check_length(ptr + Wrapping(data.len()));
+        memory.check_length(ptr + data.len());
 
         if is_exact {
           data
@@ -49,7 +49,7 @@ fn _interpret(
             .map(|value| value * factor)
             .enumerate()
             .for_each(|(i, value)| {
-              memory[ptr + Wrapping(i)] += value;
+              memory[ptr + i] += value;
             });
         } else {
           simple_loop(memory, *offset, data, 0);
@@ -60,7 +60,7 @@ fn _interpret(
         offset,
         data,
       } => {
-        let last_ptr = memory.ptr + Wrapping(*offset as usize) + Wrapping(data.len());
+        let last_ptr = memory.ptr + *offset as usize + data.len();
 
         memory.check_length(last_ptr);
 
@@ -76,21 +76,29 @@ fn _interpret(
           _interpret(instructions, reader, writer, memory);
         }
       }
+
       Instruction::ModifyRun {
         shift,
         offset,
         data,
       } => modify_run(memory, *offset, data, *shift),
-      Instruction::Print => writer.write_all(&[memory.get()]).expect("Could not output"),
+
+      Instruction::Print => write_char(writer, memory.get()),
       Instruction::Read => read_char(reader, memory),
-      Instruction::Clear => memory.set(0),
+
       Instruction::Shift(amount) => memory.shift(*amount),
-      Instruction::Modify(amount) => {
-        let ptr = memory.ptr;
-        memory[ptr] += *amount;
+
+      Instruction::Set(value) => memory.set_raw(*value),
+      Instruction::SetOffset(amount, offset) => {
+        let ptr = memory.ptr + *offset as usize;
+        memory.check_length(ptr + 1);
+        memory[ptr] = *amount;
       }
+
+      Instruction::Modify(amount) => *memory.get_mut() += *amount,
       Instruction::ModifyOffset(amount, offset) => {
-        let ptr = memory.ptr + Wrapping(*offset as usize);
+        let ptr = memory.ptr + *offset as usize;
+        memory.check_length(ptr + 1);
         memory[ptr] += *amount;
       }
 
@@ -99,7 +107,11 @@ fn _interpret(
   }
 }
 
-fn simple_loop(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
+fn write_char(writer: &mut impl Write, char: u8) {
+  writer.write_all(&[char]).expect("Could not output");
+}
+
+fn simple_loop(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
   while memory.get() != 0 {
     modify_run(memory, offset, data, shift);
   }
@@ -115,13 +127,13 @@ fn read_char(input: &mut Bytes<impl Read>, memory: &mut Memory) {
   memory.set(input);
 }
 
-fn modify_run(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
-  let ptr = memory.ptr + Wrapping(offset as usize);
+fn modify_run(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
+  let ptr = memory.ptr + offset as usize;
 
-  memory.check_length(ptr + Wrapping(data.len()));
+  memory.check_length(ptr + data.len());
 
   data.iter().enumerate().for_each(|(i, value)| {
-    memory[ptr + Wrapping(i)] += value;
+    memory[ptr + i] += value;
   });
 
   memory.shift(shift);
