@@ -39,7 +39,7 @@ fn _interpret(
         let factor = memory.get_raw() / linearity_factor;
         let is_exact = memory.get_raw() % linearity_factor == Wrapping(0);
 
-        let ptr = memory.ptr + *offset as usize;
+        let ptr = memory.ptr.wrapping_add_signed(*offset);
 
         memory.check_length(ptr + data.len());
 
@@ -90,14 +90,14 @@ fn _interpret(
 
       Instruction::Set(value) => memory.set_raw(*value),
       Instruction::SetOffset(amount, offset) => {
-        let ptr = memory.ptr + *offset as usize;
+        let ptr = memory.ptr.wrapping_add_signed(*offset);
         memory.check_length(ptr + 1);
         memory[ptr] = *amount;
       }
 
       Instruction::Modify(amount) => *memory.get_mut() += *amount,
       Instruction::ModifyOffset(amount, offset) => {
-        let ptr = memory.ptr + *offset as usize;
+        let ptr = memory.ptr.wrapping_add_signed(*offset);
         memory.check_length(ptr + 1);
         memory[ptr] += *amount;
       }
@@ -128,7 +128,7 @@ fn read_char(input: &mut Bytes<impl Read>, memory: &mut Memory) {
 }
 
 fn modify_run(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
-  let ptr = memory.ptr + offset as usize;
+  let ptr = memory.ptr.wrapping_add_signed(offset);
 
   memory.check_length(ptr + data.len());
 

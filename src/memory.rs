@@ -52,8 +52,7 @@ impl Memory {
 
   #[inline]
   pub fn shift(&mut self, delta: isize) {
-    // self.ptr = self.ptr.checked_add_signed(delta).unwrap_or(0);
-    self.ptr += delta as usize;
+    self.ptr = self.ptr.wrapping_add_signed(delta);
 
     self.check_length(self.ptr + 1);
   }
