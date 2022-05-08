@@ -16,7 +16,7 @@ pub fn optimize(instructions: &[Instruction]) -> Vec<Instruction> {
 
     let (new_instructions, changed_2) = constant_folding(&new_instructions);
 
-    let (new_instructions, changed_3) = remove_dead(&new_instructions);
+    let (new_instructions, changed_3) = remove_dead(new_instructions);
 
     instructions = new_instructions;
     done = !(changed_1 || changed_2 || changed_3);
@@ -214,32 +214,39 @@ fn constant_folding(source: &[Instruction]) -> (Vec<Instruction>, bool) {
   (result, changed)
 }
 
-fn remove_dead(source: &[Instruction]) -> (Vec<Instruction>, bool) {
-  let mut result = Vec::with_capacity(source.len());
+fn remove_dead(mut source: Vec<Instruction>) -> (Vec<Instruction>, bool) {
   let mut i = 0;
 
   let mut changed = false;
 
   while i < source.len() {
     changed |= match source.get(i) {
-      Some(Modify(Wrapping(0)) | ModifyOffset(Wrapping(0), ..) | Shift(0)) => true,
-      Some(SetOffset(value, offset)) if *offset == 0 => {
-        result.push(Set(*value));
+      Some(Modify(Wrapping(0)) | ModifyOffset(Wrapping(0), ..) | Shift(0)) => {
+        source.remove(i);
+
         true
       }
-      Some(ModifyOffset(value, offset)) if *offset == 0 => {
-        result.push(Modify(*value));
+      Some(SetOffset(value, 0)) => {
+        source[i] = Set(*value);
+        i += 1;
+
+        true
+      }
+      Some(ModifyOffset(value, 0)) => {
+        source[i] = Modify(*value);
+        i += 1;
+
         true
       }
       _ => {
-        result.push(source[i].clone());
+        i += 1;
+
         false
       }
     };
-    i += 1;
   }
 
-  (result, changed)
+  (source, changed)
 }
 
 fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
