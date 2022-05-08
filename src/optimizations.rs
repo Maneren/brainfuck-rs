@@ -7,15 +7,23 @@ use crate::instructions::Instruction::{
 
 pub fn optimize(instructions: &[Instruction]) -> Vec<Instruction> {
   dbg!(instructions.len());
-  let instructions = &compress_runs(instructions);
+  let mut instructions = compress_runs(instructions);
   dbg!(instructions.len());
-  let instructions = &optimize_small_loops(instructions);
+  let mut done = false;
+
+  while !done {
+    let (new_instructions, changed_1) = optimize_small_loops(&instructions);
+
+    let (new_instructions, changed_2) = constant_folding(&new_instructions);
+
+    let (new_instructions, changed_3) = remove_dead(&new_instructions);
+
+    instructions = new_instructions;
+    done = !(changed_1 || changed_2 || changed_3);
+  }
+
   dbg!(instructions.len());
-  let instructions = &constant_folding(instructions);
-  dbg!(instructions.len());
-  let instructions = &remove_dead(instructions);
-  dbg!(instructions.len());
-  collect_loops(instructions)
+  collect_loops(&instructions)
 }
 
 fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
@@ -62,21 +70,23 @@ fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
   result
 }
 
-fn optimize_small_loops(source: &[Instruction]) -> Vec<Instruction> {
+fn optimize_small_loops(source: &[Instruction]) -> (Vec<Instruction>, bool) {
   let mut result = Vec::with_capacity(source.len());
   let mut i = 0;
 
+  let mut changed = false;
+
   while i < source.len() {
-    match (source.get(i), source.get(i + 1), source.get(i + 2)) {
+    changed |= match (source.get(i), source.get(i + 1), source.get(i + 2)) {
       (Some(BlockStart), Some(Modify(..)), Some(BlockEnd)) => {
         result.push(Set(Wrapping(0)));
-
         i += 2;
+        true
       }
       (Some(BlockStart), Some(Shift(shift)), Some(BlockEnd)) => {
         result.push(SearchLoop { step: *shift });
-
         i += 2;
+        true
       }
       (
         Some(BlockStart),
@@ -103,22 +113,27 @@ fn optimize_small_loops(source: &[Instruction]) -> Vec<Instruction> {
         }
 
         i += 2;
+        true
       }
       _ => {
         result.push(source[i].clone());
+        false
       }
-    }
+    };
     i += 1;
   }
 
-  result
+  (result, changed)
 }
 
-fn constant_folding(source: &[Instruction]) -> Vec<Instruction> {
+fn constant_folding(source: &[Instruction]) -> (Vec<Instruction>, bool) {
   let mut result = Vec::with_capacity(source.len());
   let mut i = 0;
+
+  let mut changed = false;
+
   while i < source.len() {
-    match (source.get(i), source.get(i + 1), source.get(i + 2)) {
+    changed |= match (source.get(i), source.get(i + 1), source.get(i + 2)) {
       (
         Some(Shift(a)),
         Some(Set(..) | Modify(..) | ModifyOffset(..) | SetOffset(..)),
@@ -138,41 +153,13 @@ fn constant_folding(source: &[Instruction]) -> Vec<Instruction> {
         result.push(Shift(a + b));
 
         i += 2;
+        true
       }
-
-      /* (
-        Some(Shift(a)),
-        Some(LinearLoop {
-          offset,
-          linearity_factor,
-          data,
-        }),
-        Some(Shift(b)),
-      ) => {
-        dbg!((source.get(i), source.get(i + 1), source.get(i + 2)));
-        dbg!((
-          LinearLoop {
-            offset: offset + a,
-            linearity_factor: *linearity_factor,
-            data: data.clone(),
-          },
-          Shift(a + b)
-        ));
-
-        result.push(LinearLoop {
-          offset: offset + a,
-          linearity_factor: *linearity_factor,
-          data: data.clone(),
-        });
-
-        result.push(Shift(a + b));
-
-        i += 2;
-      } */
       _ => {
         result.push(source[i].clone());
+        false
       }
-    }
+    };
     i += 1;
   }
 
@@ -181,53 +168,78 @@ fn constant_folding(source: &[Instruction]) -> Vec<Instruction> {
   let mut i = 0;
 
   while i < source.len() {
-    let op = match (source.get(i), source.get(i + 1)) {
+    changed |= match (source.get(i), source.get(i + 1)) {
       (Some(Set(a)), Some(Modify(b))) => {
         i += 1;
+        result.push(Set(a + b));
 
-        Set(a + b)
+        true
       }
       (Some(Set(..)), Some(Set(b))) => {
         i += 1;
+        result.push(Set(*b));
 
-        Set(*b)
+        true
       }
       (Some(Modify(a)), Some(Modify(b))) => {
         i += 1;
+        result.push(Modify(a + b));
 
-        Modify(a + b)
+        true
       }
       (Some(Shift(a)), Some(Shift(b))) => {
         i += 1;
-        Shift(a + b)
+        result.push(Shift(a + b));
+
+        true
       }
+      (Some(ModifyOffset(value, a)), Some(Shift(b))) if a == b => {
+        i += 1;
 
-      _ => source[i].clone(),
+        result.push(Shift(*a));
+        result.push(Modify(*value));
+
+        true
+      }
+      _ => {
+        result.push(source[i].clone());
+
+        false
+      }
     };
-
-    result.push(op);
 
     i += 1;
   }
 
-  result
+  (result, changed)
 }
 
-fn remove_dead(source: &[Instruction]) -> Vec<Instruction> {
+fn remove_dead(source: &[Instruction]) -> (Vec<Instruction>, bool) {
   let mut result = Vec::with_capacity(source.len());
   let mut i = 0;
 
+  let mut changed = false;
+
   while i < source.len() {
-    match source.get(i) {
-      Some(Modify(Wrapping(0)) | ModifyOffset(Wrapping(0), ..) | Shift(0)) => {}
+    changed |= match source.get(i) {
+      Some(Modify(Wrapping(0)) | ModifyOffset(Wrapping(0), ..) | Shift(0)) => true,
+      Some(SetOffset(value, offset)) if *offset == 0 => {
+        result.push(Set(*value));
+        true
+      }
+      Some(ModifyOffset(value, offset)) if *offset == 0 => {
+        result.push(Modify(*value));
+        true
+      }
       _ => {
         result.push(source[i].clone());
+        false
       }
-    }
+    };
     i += 1;
   }
 
-  result
+  (result, changed)
 }
 
 fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
