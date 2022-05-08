@@ -1,5 +1,5 @@
 use std::{
-  io::{Bytes, Read, Write},
+  io::{Read, Write},
   num::Wrapping,
 };
 
@@ -13,7 +13,9 @@ pub fn interpret(
 ) {
   let mut memory = Memory::new(memory_size);
 
-  let mut input = input.bytes();
+  let mut input = input
+    .bytes()
+    .map(|b| b.expect("Error when reading from stdin"));
   let mut output = output;
 
   _interpret(instructions, &mut input, &mut output, &mut memory);
@@ -21,7 +23,7 @@ pub fn interpret(
 
 fn _interpret(
   instructions: &[Instruction],
-  reader: &mut Bytes<impl Read>,
+  reader: &mut impl Iterator<Item = u8>,
   writer: &mut impl Write,
   memory: &mut Memory,
 ) {
@@ -108,7 +110,9 @@ fn _interpret(
 }
 
 fn write_char(writer: &mut impl Write, char: u8) {
-  writer.write_all(&[char]).expect("Could not output");
+  writer
+    .write_all(&[char])
+    .expect("Error when writing to output");
 }
 
 fn simple_loop(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
@@ -117,14 +121,8 @@ fn simple_loop(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift:
   }
 }
 
-fn read_char(input: &mut Bytes<impl Read>, memory: &mut Memory) {
-  // if stdin empty, use NULL char
-  let input = input
-    .next()
-    .unwrap_or(Ok(0))
-    .expect("Error when reading from stdin");
-
-  memory.set(input);
+fn read_char(input: &mut impl Iterator<Item = u8>, memory: &mut Memory) {
+  memory.set(input.next().unwrap_or(0));
 }
 
 fn modify_run(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
