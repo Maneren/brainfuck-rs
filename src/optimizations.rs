@@ -71,22 +71,23 @@ fn optimize_small_loops(source: &[Instruction]) -> Vec<Instruction> {
             shift,
             offset,
             data,
-          } => {
-            if *shift == 0 && *offset <= 0 {
-              let linearity_factor = -data[(-offset) as usize]; // value at offset 0
-              LinearLoop {
-                offset: *offset,
-                linearity_factor,
-                data: data.clone(),
-              }
-            } else {
-              SimpleLoop {
-                shift: *shift,
-                offset: *offset,
-                data: data.clone(),
-              }
+          } if *shift == 0 && *offset <= 0 => {
+            let linearity_factor = -data[(-offset) as usize]; // value at offset 0
+            LinearLoop {
+              offset: *offset,
+              linearity_factor,
+              data: data.clone(),
             }
           }
+          ModifyRun {
+            shift,
+            offset,
+            data,
+          } => SimpleLoop {
+            shift: *shift,
+            offset: *offset,
+            data: data.clone(),
+          },
           _ => Loop(instructions.clone()),
         };
 
