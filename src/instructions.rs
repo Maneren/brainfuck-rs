@@ -12,24 +12,24 @@ pub enum Instruction {
   BlockEnd,
 
   Clear,
-  Shift(i32),
+  Shift(isize),
   ModifyRun {
-    shift: i32,
-    offset: i32,
+    shift: isize,
+    offset: isize,
     data: Vec<Wrapping<u8>>,
   },
   LinearLoop {
-    offset: i32,
+    offset: isize,
     linearity_factor: Wrapping<u8>,
     data: Vec<Wrapping<u8>>,
   },
   SimpleLoop {
-    shift: i32,
-    offset: i32,
+    shift: isize,
+    offset: isize,
     data: Vec<Wrapping<u8>>,
   },
   SearchLoop {
-    step: i32,
+    step: isize,
   },
   Loop(Vec<Instruction>),
 }

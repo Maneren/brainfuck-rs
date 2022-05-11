@@ -101,7 +101,7 @@ fn _interpret(
   }
 }
 
-fn simple_loop(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
+fn simple_loop(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
   while memory.get() != 0 {
     modify_run(memory, offset, data, shift);
   }
@@ -117,7 +117,7 @@ fn read_char(input: &mut Bytes<impl Read>, memory: &mut Memory) {
   memory.set(input);
 }
 
-fn modify_run(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
+fn modify_run(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
   let ptr = memory.ptr + Wrapping(offset as usize);
 
   memory.check_length(ptr + Wrapping(data.len()));

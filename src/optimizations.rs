@@ -146,7 +146,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
           i += 1;
         }
 
-        let shift = memory_pointer as i32 + offset;
+        let shift = memory_pointer as isize + offset;
 
         // remove unused data
         while let Some(Wrapping(0)) = data.back() {
