@@ -31,9 +31,7 @@ pub enum Instruction {
   SearchLoop {
     step: i32,
   },
-  Loop {
-    instructions: Vec<Instruction>,
-  },
+  Loop(Vec<Instruction>),
 }
 
 impl Debug for Instruction {
@@ -80,7 +78,7 @@ impl Debug for Instruction {
         .field("offset", offset)
         .field("data", &format!("{data:?}"))
         .finish(),
-      Self::Loop { instructions } => f.debug_list().entries(instructions).finish(),
+      Self::Loop(instructions) => f.debug_list().entries(instructions).finish(),
     }
   }
 }

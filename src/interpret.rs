@@ -27,15 +27,16 @@ fn _interpret(
 ) {
   for op in instructions {
     match op {
+      Instruction::LinearLoop { .. }
+      | Instruction::SimpleLoop { .. }
+      | Instruction::Loop(..)
+      | Instruction::SearchLoop { .. }
+        if memory.get() == 0 => {}
       Instruction::LinearLoop {
         offset,
         linearity_factor,
         data,
       } => {
-        if memory.get() == 0 {
-          continue;
-        }
-
         let factor = memory.get_raw() / linearity_factor;
         let is_exact = memory.get_raw() % linearity_factor == Wrapping(0);
 
@@ -71,7 +72,7 @@ fn _interpret(
           memory.shift(*step);
         }
       }
-      Instruction::Loop { instructions } => {
+      Instruction::Loop(instructions) => {
         while memory.get() != 0 {
           _interpret(instructions, reader, writer, memory);
         }
