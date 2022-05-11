@@ -28,8 +28,8 @@ use crate::interpret::interpret;
 #[derive(Parser)]
 #[clap(author, version, about)]
 struct Cli {
-  /// The brainfuck program file
-  file: String,
+  /// The brainfuck program file. Leave empty to read from stdin.
+  file: Option<String>,
 
   /// Memory size in bytes. Accepts suffixes B, k, M, G. Leave empty for dynamically allocated, starting at 256B.
   #[clap(short, long)]
@@ -49,14 +49,15 @@ macro_rules! measure_time {
 fn main() {
   let args = Cli::parse();
 
-  let program = if args.file == "-" {
+  let program = if let Some(file) = args.file {
+    fs::read_to_string(file).expect("Couldn't read from file!")
+  } else {
     stdin()
       .bytes()
       .take_while(|b| b.is_ok_and(|&b| b != b'|'))
-      .map(|b| b.unwrap() as char)
-      .collect::<String>()
-  } else {
-    fs::read_to_string(args.file).expect("Couldn't read from file!")
+      .map(Result::unwrap)
+      .map(char::from)
+      .collect()
   };
 
   let memory_size = parse_memory_size(args.memory_size);
@@ -79,12 +80,12 @@ fn parse_memory_size(memory_size: Option<String>) -> usize {
   memory_size.map_or(256, |input| {
     let number = input
       .chars()
-      .take_while(|c| c.is_digit(10))
+      .take_while(char::is_ascii_digit)
       .collect::<String>()
-      .parse::<u32>()
+      .parse::<usize>()
       .expect("Invalid memory size!");
 
-    let unit = match input.chars().find(|c| !c.is_digit(10)) {
+    let unit = match input.chars().find(|c| !c.is_ascii_digit()) {
       None | Some('B') => 1,
       Some('k') => 1024,
       Some('M') => 1024 * 1024,
@@ -92,6 +93,6 @@ fn parse_memory_size(memory_size: Option<String>) -> usize {
       _ => panic!("Invalid memory unit!"),
     };
 
-    (number * unit) as usize
+    number * unit
   })
 }
