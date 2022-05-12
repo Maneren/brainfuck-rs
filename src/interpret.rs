@@ -95,6 +95,14 @@ fn _interpret(
       Instruction::Clear => memory.set(0),
 
       Instruction::Shift(amount) => memory.shift(*amount),
+      Instruction::Modify(amount) => {
+        let ptr = memory.ptr;
+        memory[ptr] += *amount;
+      }
+      Instruction::ModifyOffset(amount, offset) => {
+        let ptr = memory.ptr + Wrapping(*offset as usize);
+        memory[ptr] += *amount;
+      }
 
       _ => unreachable!("{op:?}"),
     }

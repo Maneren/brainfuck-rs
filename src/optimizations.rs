@@ -1,8 +1,8 @@
 use std::{collections::VecDeque, num::Wrapping};
 
 use crate::instructions::Instruction::{
-  self, BlockEnd, BlockStart, Clear, Decrement, Increment, Left, LinearLoop, Loop, ModifyRun,
-  Right, SearchLoop, Shift, SimpleLoop,
+  self, BlockEnd, BlockStart, Clear, Decrement, Increment, Left, LinearLoop, Loop, Modify,
+  ModifyOffset, ModifyRun, Right, SearchLoop, Shift, SimpleLoop,
 };
 
 pub fn optimize(instructions: &[Instruction]) -> Vec<Instruction> {
@@ -55,7 +55,6 @@ fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
 
 fn optimize_small_loops(source: Vec<Instruction>) -> Vec<Instruction> {
   let mut result = Vec::with_capacity(source.len());
-
   let mut push = #[inline]
   |val| result.push(val);
 
@@ -155,6 +154,16 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
         }
 
         if data.is_empty() {
+          if shift != 0 {
+            result.push(Shift(shift));
+          }
+        } else if data.len() == 1 {
+          if offset == 0 {
+            result.push(Modify(data[0]));
+          } else {
+            result.push(ModifyOffset(data[0], offset));
+          }
+
           if shift != 0 {
             result.push(Shift(shift));
           }

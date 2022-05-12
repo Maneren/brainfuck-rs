@@ -47,6 +47,8 @@ impl Debug for Instruction {
       Self::BlockEnd => write!(f, "BlockEnd"),
       Self::Clear => write!(f, "Clear"),
       Self::Shift(amount) => write!(f, "Shift({amount})"),
+      Self::Modify(amount) => write!(f, "Modify({amount})"),
+      Self::ModifyOffset(amount, offset) => write!(f, "ModifyOffset({amount}, {offset})"),
       Self::ModifyRun {
         shift,
         offset,
