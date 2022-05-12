@@ -37,26 +37,7 @@ fn _interpret(
         offset,
         linearity_factor,
         data,
-      } => {
-        let factor = memory.get_raw() / linearity_factor;
-        let is_exact = memory.get_raw() % linearity_factor == Wrapping(0);
-
-        let ptr = memory.ptr + Wrapping(*offset as usize);
-
-        memory.check_length(ptr + Wrapping(data.len()));
-
-        if is_exact {
-          data
-            .iter()
-            .map(|value| value * factor)
-            .enumerate()
-            .for_each(|(i, value)| {
-              memory[ptr + Wrapping(i)] += value;
-            });
-        } else {
-          simple_loop(memory, *offset, data, 0);
-        }
-      }
+      } => linear_loop(memory, *linearity_factor, *offset, data),
 
       Instruction::SimpleLoop {
         shift,
@@ -98,6 +79,27 @@ fn _interpret(
 
       _ => unreachable!("{op:?}"),
     }
+  }
+}
+
+fn linear_loop(
+  memory: &mut Memory,
+  linearity_factor: Wrapping<u8>,
+  offset: isize,
+  data: &[Wrapping<u8>],
+) {
+  let factor = memory.get_raw() / linearity_factor;
+  let is_exact = memory.get_raw() % linearity_factor == Wrapping(0);
+  let ptr = memory.ptr + Wrapping(offset as usize);
+
+  memory.check_length(ptr + Wrapping(data.len()));
+
+  if is_exact {
+    data.iter().enumerate().for_each(|(i, value)| {
+      memory[ptr + Wrapping(i)] += value * factor;
+    });
+  } else {
+    simple_loop(memory, offset, data, 0);
   }
 }
 
