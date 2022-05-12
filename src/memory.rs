@@ -41,7 +41,7 @@ impl Memory {
   }
 
   #[inline]
-  pub fn shift(&mut self, delta: i32) {
+  pub fn shift(&mut self, delta: isize) {
     self.ptr += delta as usize;
 
     self.check_length(self.ptr + Wrapping(1));

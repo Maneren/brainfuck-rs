@@ -27,15 +27,17 @@ fn _interpret(
 ) {
   for op in instructions {
     match op {
+      Instruction::LinearLoop { .. }
+      | Instruction::SimpleLoop { .. }
+      | Instruction::Loop(..)
+      | Instruction::SearchLoop { .. }
+        if memory.get() == 0 => {}
+
       Instruction::LinearLoop {
         offset,
         linearity_factor,
         data,
       } => {
-        if memory.get() == 0 {
-          continue;
-        }
-
         let factor = memory.get_raw() / linearity_factor;
         let is_exact = memory.get_raw() % linearity_factor == Wrapping(0);
 
@@ -55,6 +57,7 @@ fn _interpret(
           simple_loop(memory, *offset, data, 0);
         }
       }
+
       Instruction::SimpleLoop {
         shift,
         offset,
@@ -66,24 +69,31 @@ fn _interpret(
 
         simple_loop(memory, *offset, data, *shift);
       }
+
       Instruction::SearchLoop { step } => {
         while memory.get() != 0 {
           memory.shift(*step);
         }
       }
-      Instruction::Loop { instructions } => {
+
+      Instruction::Loop(instructions) => {
         while memory.get() != 0 {
           _interpret(instructions, reader, writer, memory);
         }
       }
+
       Instruction::ModifyRun {
         shift,
         offset,
         data,
       } => modify_run(memory, *offset, data, *shift),
+
       Instruction::Print => writer.write_all(&[memory.get()]).expect("Could not output"),
+
       Instruction::Read => read_char(reader, memory),
+
       Instruction::Clear => memory.set(0),
+
       Instruction::Shift(amount) => memory.shift(*amount),
       Instruction::Modify(amount) => {
         let ptr = memory.ptr;
@@ -99,7 +109,7 @@ fn _interpret(
   }
 }
 
-fn simple_loop(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
+fn simple_loop(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
   while memory.get() != 0 {
     modify_run(memory, offset, data, shift);
   }
@@ -115,7 +125,7 @@ fn read_char(input: &mut Bytes<impl Read>, memory: &mut Memory) {
   memory.set(input);
 }
 
-fn modify_run(memory: &mut Memory, offset: i32, data: &[Wrapping<u8>], shift: i32) {
+fn modify_run(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
   let ptr = memory.ptr + Wrapping(offset as usize);
 
   memory.check_length(ptr + Wrapping(data.len()));

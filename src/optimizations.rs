@@ -6,9 +6,9 @@ use crate::instructions::Instruction::{
 };
 
 pub fn optimize(instructions: &[Instruction]) -> Vec<Instruction> {
-  let instructions = &compress_runs(instructions);
-  let instructions = &optimize_small_loops(instructions);
-  collect_loops(instructions)
+  let instructions = collect_loops(instructions);
+  let instructions = compress_runs(&instructions);
+  optimize_small_loops(instructions)
 }
 
 fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
@@ -31,9 +31,7 @@ fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
 
         if level == 0 {
           if !buffer.is_empty() {
-            result.push(Loop {
-              instructions: collect_loops(&buffer),
-            });
+            result.push(Loop(collect_loops(&buffer)));
             buffer.clear();
           }
         } else {
@@ -55,53 +53,51 @@ fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
   result
 }
 
-fn optimize_small_loops(source: &[Instruction]) -> Vec<Instruction> {
+fn optimize_small_loops(source: Vec<Instruction>) -> Vec<Instruction> {
   let mut result = Vec::with_capacity(source.len());
-  let mut i = 0;
-  while i < source.len() {
-    match (source.get(i), source.get(i + 1), source.get(i + 2)) {
-      (Some(BlockStart), Some(Modify(..)), Some(BlockEnd)) => {
-        result.push(Clear);
+  let mut push = #[inline]
+  |val| result.push(val);
 
-        i += 2;
-      }
-      (Some(BlockStart), Some(Shift(shift)), Some(BlockEnd)) => {
-        result.push(SearchLoop { step: *shift });
+  for op in source {
+    match op {
+      Loop(instructions) => match &instructions[..] {
+        [] => {}
 
-        i += 2;
-      }
-      (
-        Some(BlockStart),
-        Some(ModifyRun {
+        [ModifyRun {
+          shift: 0,
+          offset: 0,
+          data,
+        }] if data.len() == 1 => push(Clear),
+
+        [Shift(amount)] if *amount != 0 => push(SearchLoop { step: *amount }),
+
+        [ModifyRun {
           shift,
           offset,
           data,
+        }] if *shift == 0 && *offset <= 0 => push(LinearLoop {
+          offset: *offset,
+          linearity_factor: -data[(-offset) as usize], // value at offset 0
+          data: data.clone(),
         }),
-        Some(BlockEnd),
-      ) => {
-        if *shift == 0 && *offset <= 0 {
-          let linearity_factor = -data[(-offset) as usize]; // value at offset 0
-          result.push(LinearLoop {
-            offset: *offset,
-            linearity_factor,
-            data: data.clone(),
-          });
-        } else {
-          result.push(SimpleLoop {
-            shift: *shift,
-            offset: *offset,
-            data: data.clone(),
-          });
-        }
 
-        i += 2;
-      }
-      _ => {
-        result.push(source[i].clone());
-      }
+        [ModifyRun {
+          shift,
+          offset,
+          data,
+        }] => push(SimpleLoop {
+          shift: *shift,
+          offset: *offset,
+          data: data.clone(),
+        }),
+
+        _ => push(Loop(optimize_small_loops(instructions))),
+      },
+
+      _ => push(op.clone()),
     }
-    i += 1;
   }
+
   result
 }
 
@@ -145,7 +141,7 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
           i += 1;
         }
 
-        let shift = memory_pointer as i32 + offset;
+        let shift = memory_pointer as isize + offset;
 
         // remove unused data
         while let Some(Wrapping(0)) = data.back() {
@@ -178,6 +174,9 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
             data: data.into_iter().collect(),
           });
         }
+      }
+      Loop(instructions) => {
+        result.push(Loop(compress_runs(instructions)));
       }
       _ => result.push(current.clone()),
     }

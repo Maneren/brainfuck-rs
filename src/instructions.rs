@@ -12,30 +12,26 @@ pub enum Instruction {
   BlockEnd,
 
   Clear,
-  Shift(i32),
-  Modify(Wrapping<u8>),
-  ModifyOffset(Wrapping<u8>, i32),
+  Shift(isize),
   ModifyRun {
-    shift: i32,
-    offset: i32,
+    shift: isize,
+    offset: isize,
     data: Vec<Wrapping<u8>>,
   },
   LinearLoop {
-    offset: i32,
+    offset: isize,
     linearity_factor: Wrapping<u8>,
     data: Vec<Wrapping<u8>>,
   },
   SimpleLoop {
-    shift: i32,
-    offset: i32,
+    shift: isize,
+    offset: isize,
     data: Vec<Wrapping<u8>>,
   },
   SearchLoop {
-    step: i32,
+    step: isize,
   },
-  Loop {
-    instructions: Vec<Instruction>,
-  },
+  Loop(Vec<Instruction>),
 }
 
 impl Debug for Instruction {
@@ -84,7 +80,7 @@ impl Debug for Instruction {
         .field("offset", offset)
         .field("data", &format!("{data:?}"))
         .finish(),
-      Self::Loop { instructions } => f.debug_list().entries(instructions).finish(),
+      Self::Loop(instructions) => f.debug_list().entries(instructions).finish(),
     }
   }
 }
