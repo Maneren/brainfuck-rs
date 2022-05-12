@@ -90,14 +90,12 @@ fn optimize_small_loops(source: Vec<Instruction>) -> Vec<Instruction> {
           data: data.clone(),
         }),
 
-        [op] => push(op.clone()),
+        [op] => push(Loop(Vec::from([op.clone()]))),
 
         _ => push(Loop(optimize_small_loops(instructions))),
       },
 
-      _ => {
-        push(op.clone());
-      }
+      _ => push(op),
     }
   }
 
