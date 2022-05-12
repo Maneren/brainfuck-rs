@@ -4,6 +4,7 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_possible_wrap)]
 #![feature(is_some_with)]
+#![feature(stmt_expr_attributes)]
 // credits:
 //   fade - base idea and code
 

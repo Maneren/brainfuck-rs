@@ -55,7 +55,9 @@ fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
 
 fn optimize_small_loops(source: Vec<Instruction>) -> Vec<Instruction> {
   let mut result = Vec::with_capacity(source.len());
-  let mut push = |val| result.push(val);
+
+  let mut push = #[inline]
+  |val| result.push(val);
 
   for op in source {
     match op {
@@ -90,14 +92,10 @@ fn optimize_small_loops(source: Vec<Instruction>) -> Vec<Instruction> {
           data: data.clone(),
         }),
 
-        [op] => push(op.clone()),
-
         _ => push(Loop(optimize_small_loops(instructions))),
       },
 
-      _ => {
-        push(op.clone());
-      }
+      _ => push(op.clone()),
     }
   }
 
