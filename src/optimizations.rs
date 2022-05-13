@@ -1,8 +1,8 @@
 use std::{collections::VecDeque, num::Wrapping};
 
 use crate::instructions::Instruction::{
-  self, BlockEnd, BlockStart, Clear, Decrement, Increment, Left, LinearLoop, Loop, Modify,
-  ModifyOffset, ModifyRun, Right, SearchLoop, Shift, SimpleLoop,
+  self, BlockEnd, BlockStart, Clear, Decrement, Increment, Left, LinearLoop, Loop, ModifyRun,
+  Right, SearchLoop, Shift, SimpleLoop,
 };
 
 pub fn optimize(instructions: &[Instruction]) -> Vec<Instruction> {
@@ -154,16 +154,6 @@ fn compress_runs(source: &[Instruction]) -> Vec<Instruction> {
         }
 
         if data.is_empty() {
-          if shift != 0 {
-            result.push(Shift(shift));
-          }
-        } else if data.len() == 1 {
-          if offset == 0 {
-            result.push(Modify(data[0]));
-          } else {
-            result.push(ModifyOffset(data[0], offset));
-          }
-
           if shift != 0 {
             result.push(Shift(shift));
           }
