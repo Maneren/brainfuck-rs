@@ -18,6 +18,11 @@ pub enum Instruction {
     offset: isize,
     data: Vec<Wrapping<u8>>,
   },
+  ClearRun {
+    shift: isize,
+    offset: isize,
+    data: Vec<bool>,
+  },
   LinearLoop {
     offset: isize,
     linearity_factor: Wrapping<u8>,
@@ -27,6 +32,11 @@ pub enum Instruction {
     shift: isize,
     offset: isize,
     data: Vec<Wrapping<u8>>,
+  },
+  SimpleClearLoop {
+    shift: isize,
+    offset: isize,
+    data: Vec<bool>,
   },
   SearchLoop {
     step: isize,
@@ -57,12 +67,32 @@ impl Debug for Instruction {
         .field("offset", offset)
         .field("data", &format!("{data:?}"))
         .finish(),
+      Self::ClearRun {
+        shift,
+        offset,
+        data,
+      } => f
+        .debug_struct("ClearRun")
+        .field("shift", shift)
+        .field("offset", offset)
+        .field("data", &format!("{data:?}"))
+        .finish(),
       Self::SimpleLoop {
         shift,
         offset,
         data,
       } => f
         .debug_struct("SimpleLoop")
+        .field("shift", shift)
+        .field("offset", offset)
+        .field("data", &format!("{data:?}"))
+        .finish(),
+      Self::SimpleClearLoop {
+        shift,
+        offset,
+        data,
+      } => f
+        .debug_struct("SimpleClearLoop")
         .field("shift", shift)
         .field("offset", offset)
         .field("data", &format!("{data:?}"))

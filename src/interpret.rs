@@ -96,9 +96,39 @@ fn _interpret(
 
       Instruction::Shift(amount) => memory.shift(*amount),
 
+      Instruction::ClearRun {
+        shift,
+        offset,
+        data,
+      } => clear_run(memory, *offset, data, *shift),
+
+      Instruction::SimpleClearLoop {
+        shift,
+        offset,
+        data,
+      } => {
+        while memory.get() != 0 {
+          clear_run(memory, *offset, data, *shift);
+        }
+      }
+
       _ => unreachable!("{op:?}"),
     }
   }
+}
+
+fn clear_run(memory: &mut Memory, offset: isize, data: &[bool], shift: isize) {
+  let ptr = memory.ptr + Wrapping(offset as usize);
+
+  memory.check_length(ptr + Wrapping(data.len()));
+
+  data.iter().enumerate().for_each(|(i, value)| {
+    if *value {
+      memory[ptr + Wrapping(i)] = Wrapping(0);
+    }
+  });
+
+  memory.shift(shift);
 }
 
 fn simple_loop(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {

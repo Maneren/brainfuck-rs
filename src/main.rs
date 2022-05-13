@@ -5,6 +5,7 @@
 #![allow(clippy::cast_possible_wrap)]
 #![feature(is_some_with)]
 #![feature(stmt_expr_attributes)]
+#![feature(mixed_integer_ops)]
 // credits:
 //   fade - base idea and code
 
