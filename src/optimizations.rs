@@ -1,4 +1,6 @@
-use std::{collections::VecDeque, num::Wrapping};
+use std::collections::VecDeque;
+
+use wrapping_proc_macro::wrapping;
 
 use crate::instructions::Instruction::{
   self, BlockEnd, BlockStart, Clear, ClearRun, Decrement, Increment, Left, LinearLoop, Loop,
@@ -79,7 +81,7 @@ fn optimize_small_loops(source: Vec<Instruction>) -> Vec<Instruction> {
           data,
         }] if *shift == 0 && *offset <= 0 => push(LinearLoop {
           offset: *offset,
-          linearity_factor: -data[(-offset) as usize], // value at offset 0
+          linearity_factor: wrapping! { -data[(-offset) as usize] }, // value at offset 0
           data: data.clone(),
         }),
 
@@ -123,16 +125,16 @@ fn compress_modify_runs(source: &[Instruction]) -> Vec<Instruction> {
         let mut memory_pointer = 0;
 
         let mut offset = 0;
-        let mut data = VecDeque::from([Wrapping(0)]);
+        let mut data = VecDeque::from([0u8]);
 
         while i < source.len() {
           match &source[i] {
-            Increment => data[memory_pointer] += 1,
-            Decrement => data[memory_pointer] -= 1,
+            Increment => wrapping! { data[memory_pointer] += 1 },
+            Decrement => wrapping! { data[memory_pointer] -= 1 },
             Right => {
               memory_pointer += 1;
               if memory_pointer >= data.len() {
-                data.push_back(Wrapping(0));
+                data.push_back(0);
               }
             }
             Left => {
@@ -141,7 +143,7 @@ fn compress_modify_runs(source: &[Instruction]) -> Vec<Instruction> {
               } else {
                 offset -= 1;
 
-                data.push_front(Wrapping(0));
+                data.push_front(0);
               }
             }
             _ => {
@@ -156,11 +158,11 @@ fn compress_modify_runs(source: &[Instruction]) -> Vec<Instruction> {
         let shift = memory_pointer as isize + offset;
 
         // remove unused data
-        while let Some(Wrapping(0)) = data.back() {
+        while let Some(0) = data.back() {
           data.pop_back();
         }
 
-        while let Some(Wrapping(0)) = data.front() {
+        while let Some(0) = data.front() {
           offset += 1;
           data.pop_front();
         }

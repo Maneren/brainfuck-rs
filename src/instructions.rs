@@ -1,4 +1,4 @@
-use std::{fmt::Debug, num::Wrapping};
+use std::fmt::Debug;
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Instruction {
@@ -16,7 +16,7 @@ pub enum Instruction {
   ModifyRun {
     shift: isize,
     offset: isize,
-    data: Vec<Wrapping<u8>>,
+    data: Vec<u8>,
   },
   ClearRun {
     shift: isize,
@@ -25,13 +25,13 @@ pub enum Instruction {
   },
   LinearLoop {
     offset: isize,
-    linearity_factor: Wrapping<u8>,
-    data: Vec<Wrapping<u8>>,
+    linearity_factor: u8,
+    data: Vec<u8>,
   },
   SimpleLoop {
     shift: isize,
     offset: isize,
-    data: Vec<Wrapping<u8>>,
+    data: Vec<u8>,
   },
   SimpleClearLoop {
     shift: isize,

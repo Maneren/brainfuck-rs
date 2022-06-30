@@ -1,55 +1,52 @@
 use std::{
   fmt::{self, Debug},
-  num::Wrapping,
   ops::{Index, IndexMut},
 };
 
+use wrapping_proc_macro::wrapping;
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct Memory {
-  pub data: Vec<Wrapping<u8>>,
-  pub ptr: Wrapping<usize>,
+  pub data: Vec<u8>,
+  pub ptr: usize,
 }
 
 impl Memory {
   #[inline]
   pub fn new(size: usize) -> Self {
     Self {
-      data: vec![Wrapping(0); size],
-      ptr: Wrapping(0),
+      data: vec![0; size],
+      ptr: 0,
     }
   }
 
   #[inline]
   pub fn get(&self) -> u8 {
-    self.get_raw().0
-  }
-
-  #[inline]
-  pub fn get_raw(&self) -> Wrapping<u8> {
-    self.data[self.ptr.0]
+    self.data[self.ptr]
   }
 
   #[inline]
   pub fn set(&mut self, value: u8) {
-    self.data[self.ptr.0] = Wrapping(value);
+    self.data[self.ptr] = value;
   }
 
-  pub fn check_length(&mut self, length: Wrapping<usize>) {
-    if length.0 > self.data.len() {
-      self.data.resize(length.0, Wrapping(0));
+  pub fn check_length(&mut self, length: usize) {
+    if length > self.data.len() {
+      self.data.resize(length, 0);
     }
   }
 
   #[inline]
   pub fn shift(&mut self, delta: isize) {
-    self.ptr += delta as usize;
-
-    self.check_length(self.ptr + Wrapping(1));
+    wrapping! {
+      self.ptr += delta as usize;
+      self.check_length(self.ptr + 1);
+    }
   }
 }
 
 impl Index<usize> for Memory {
-  type Output = Wrapping<u8>;
+  type Output = u8;
 
   fn index(&self, index: usize) -> &Self::Output {
     &self.data[index]
@@ -59,20 +56,6 @@ impl Index<usize> for Memory {
 impl IndexMut<usize> for Memory {
   fn index_mut(&mut self, index: usize) -> &mut Self::Output {
     &mut self.data[index]
-  }
-}
-
-impl Index<Wrapping<usize>> for Memory {
-  type Output = Wrapping<u8>;
-
-  fn index(&self, index: Wrapping<usize>) -> &Self::Output {
-    &self[index.0]
-  }
-}
-
-impl IndexMut<Wrapping<usize>> for Memory {
-  fn index_mut(&mut self, index: Wrapping<usize>) -> &mut Self::Output {
-    &mut self[index.0]
   }
 }
 
