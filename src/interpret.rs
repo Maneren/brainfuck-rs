@@ -40,13 +40,11 @@ fn _interpret(
         let factor = memory.get() / linearity_factor;
         let is_exact = memory.get() % linearity_factor == 0;
 
-        wrapping! {
-          let ptr = memory.ptr + *offset as usize;
-          memory.check_length(ptr + data.len());
-        }
-
         if is_exact {
           wrapping! {
+            let ptr = memory.ptr + *offset as usize;
+            memory.check_length(ptr + data.len());
+
             data
               .iter()
               .map(|value| value * factor)
@@ -64,13 +62,7 @@ fn _interpret(
         shift,
         offset,
         data,
-      } => {
-        let last_ptr = wrapping! { memory.ptr + *offset as usize + data.len() };
-
-        memory.check_length(last_ptr);
-
-        simple_loop(memory, *offset, data, *shift);
-      }
+      } => simple_loop(memory, *offset, data, *shift),
 
       Instruction::SearchLoop { step } => {
         while memory.get() != 0 {
