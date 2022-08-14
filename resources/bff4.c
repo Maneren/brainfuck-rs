@@ -8,6 +8,7 @@
    NOLNR disables optimization of linear loops (where '<>' balanced), e.g. [->+>++<<].
    Linear loop is then executed in one step.
    Oleg Mazonka 4 Dec 2006  http://mazonka.com/
+   Updated by Maneren in 2022
    */
 
 #include <stdlib.h>
@@ -17,10 +18,11 @@
 typedef struct _Instruction
 {
   int shift, offset;
-  int *d, d_length;
+  int *run, run_length;
   struct _Instruction *go;
-  int c;
-  int index_go, linear;
+  int go_index;
+  int linear;
+  int ch;
   int *db, db_length;
 } Instruction;
 
@@ -32,132 +34,163 @@ void *resize_array(void *pointer, int new_size, int original_size)
 }
 #define resize_int_array(pointer, new_size, original_size) resize_array(pointer, (new_size) * sizeof(int), (original_size) * sizeof(int));
 
-void printop(Instruction *z)
+void print_instruction(Instruction *z)
 {
-  printf("op: c=%c, db='", z->c);
+  printf("op: c=%c, db='", z->ch);
 
-  /* if (!strchr("<>+-", z->c))
-     printf("%c", (char)z->c); */
+  /* if (!strchr("<>+-", z->ch))
+     printf("%c", (char)z->ch); */
 
   for (int i = 0; i < z->db_length; i++)
     printf("%c", (char)z->db[i]);
 
-  printf("' shift=%d offset=%d index_go=%d ", z->shift, z->offset, z->index_go);
+  printf("' shift=%d offset=%d go_index=%d ", z->shift, z->offset, z->go_index);
 
   if (z->linear)
     printf("linear=%d ", z->linear);
 
   printf("d=[ ");
 
-  for (int i = 0; i < z->d_length; i++)
-    printf("%d ", z->d[i]);
+  for (int i = 0; i < z->run_length; i++)
+    printf("%d ", z->run[i]);
 
   printf("]\n");
 }
 
 int load_next_char()
 {
-  int current_char;
-next:
-  current_char = getchar();
+  for (int current_char = getchar(); current_char != EOF; current_char = getchar())
+    if (strchr(",.[]+-<>!", current_char))
+      return current_char;
 
-  if (current_char == -1)
-    return -1;
-
-  if (!strchr(",.[]+-<>!", current_char))
-    goto next;
-
-  return current_char;
+  return -1;
 }
 
 int consume(Instruction *instruction)
 {
   int memory_pointer = 0;
-  int current_char = instruction->c;
+  int current_char = instruction->ch;
 
   if (strchr("[]", current_char))
     current_char = load_next_char();
 
-  instruction->d_length = 1;
-  instruction->d = resize_int_array(0, 1, 0);
+  // initialize the run array to one element
+  instruction->run_length = 1;
+  instruction->run = resize_int_array(0, 1, 0);
+
   instruction->offset = 0;
 
   instruction->db_length = 0;
   instruction->db = 0;
 
-  for (;; current_char = load_next_char())
+  for (; current_char != -1; current_char = load_next_char())
   {
-    if (current_char == -1 || current_char == '!')
-      break;
-    if (strchr(",.[]", current_char))
+    if (strchr("!,.[]", current_char))
       break;
 
     instruction->db = resize_int_array(instruction->db, instruction->db_length + 1, instruction->db_length);
     instruction->db[instruction->db_length++] = current_char;
 
-    if (current_char == '+')
-      instruction->d[memory_pointer]++;
-
-    else if (current_char == '-')
-      instruction->d[memory_pointer]--;
-
-    else if (current_char == '>')
+    switch (current_char)
     {
+    case '+':
+      instruction->run[memory_pointer]++;
+      break;
+
+    case '-':
+      instruction->run[memory_pointer]--;
+      break;
+
+    case '>':
       memory_pointer++;
-      if (memory_pointer >= instruction->d_length)
+      if (memory_pointer >= instruction->run_length)
       {
-        instruction->d = resize_int_array(instruction->d, instruction->d_length + 1, instruction->d_length);
-        instruction->d_length++;
+        instruction->run = resize_int_array(instruction->run, instruction->run_length + 1, instruction->run_length);
+        instruction->run_length++;
       }
-    }
-    else if (current_char == '<')
-    {
+      break;
+
+    case '<':
       if (memory_pointer > 0)
+      {
         memory_pointer--;
+      }
       else
       {
         instruction->offset--;
-        instruction->d = resize_int_array(instruction->d, instruction->d_length + 1, instruction->d_length);
-        for (int i = instruction->d_length; i > 0; i--)
-          instruction->d[i] = instruction->d[i - 1];
-        instruction->d[0] = 0;
-        instruction->d_length++;
+
+        // prepend 0 to the run array
+        instruction->run = resize_int_array(instruction->run, instruction->run_length + 1, instruction->run_length);
+
+        for (int i = instruction->run_length; i > 0; i--)
+          instruction->run[i] = instruction->run[i - 1];
+
+        instruction->run[0] = 0;
+
+        instruction->run_length++;
       }
     }
   }
+
+  // offset from the beggining of the run
   instruction->shift = memory_pointer + instruction->offset;
 
-  /* cut corners */
-  while (instruction->d_length && instruction->d[instruction->d_length - 1] == 0)
-    instruction->d_length--;
-  while (instruction->d_length && instruction->d[0] == 0)
+  // remove empty fields on the end
+  while (instruction->run_length && instruction->run[instruction->run_length - 1] == 0)
+    instruction->run_length--;
+
+  // remove empty fields on the start
+  while (instruction->run_length && instruction->run[0] == 0)
   {
-    instruction->d_length--;
-    for (int i = 0; i < instruction->d_length; i++)
-      instruction->d[i] = instruction->d[i + 1];
+    instruction->run_length--;
+
+    // shift whole array one to the left
+    for (int i = 0; i < instruction->run_length; i++)
+    {
+      instruction->run[i] = instruction->run[i + 1];
+    }
+
     instruction->offset++;
   }
 
   return current_char;
 }
 
-int main()
+int find_matching_opening(Instruction *instructions, int length)
 {
-  Instruction *instruction_array = 0, *instruction_array_end;
-  int instruction_array_length = 0, i;
-  int current_char = load_next_char();
+  int depth = 1;
+  int opening_index = length;
 
-  for (;; instruction_array_length++)
+  // find matching opening bracket
+  while (depth && opening_index-- > 0)
   {
-    instruction_array = resize_array(
-        instruction_array,
-        (instruction_array_length + 1) * sizeof(Instruction),
-        instruction_array_length * sizeof(Instruction));
+    int ch = instructions[opening_index].ch;
+    depth += (ch == ']') - (ch == '[');
+  }
 
-    if (current_char == -1 || current_char == '!')
-      break;
+  if (opening_index < 0)
+  {
+    printf("unbalanced ']'\n");
+    exit(1);
+  }
 
-    instruction_array[instruction_array_length].c = current_char;
+  return opening_index;
+}
+
+int load_instructions(Instruction **instructions)
+{
+  int length = 0;
+
+  for (int current_char = load_next_char(); current_char != -1 && current_char != '!'; length++)
+  {
+    *instructions = resize_array(
+        *instructions,
+        (length + 1) * sizeof(Instruction),
+        length * sizeof(Instruction));
+
+    Instruction *current = &(*instructions)[length];
+
+    current->ch = current_char;
 
     if (strchr(",.", current_char))
     {
@@ -168,136 +201,123 @@ int main()
 
     if (current_char == ']')
     {
-      int depth = 1, index = instruction_array_length;
+      int opening_index = find_matching_opening(*instructions, length);
 
-      // find matching opening bracket
-      while (depth && index >= 0)
-        if (index--)
-        {
-          int ch = instruction_array[index].c;
-          depth += (ch == ']') - (ch == '[');
-        }
-
-      if (index < 0)
-      {
-        printf("unbalanced ']'\n");
-        exit(1);
-      }
-
-      instruction_array[index].index_go = instruction_array_length;
-      instruction_array[instruction_array_length].index_go = index;
+      current->go_index = opening_index;
+      (*instructions)[opening_index].go_index = length;
     }
-    current_char = consume(instruction_array + instruction_array_length);
+
+    current_char = consume(current);
   }
 
-  for (int i = 0; i < instruction_array_length; i++)
-  {
-    Instruction *current = instruction_array + i;
-    // link jumps together
-    current->go = &instruction_array[current->index_go];
+  return length;
+}
 
-    if (current->c == '[' && current->index_go == i + 1 && current->shift == 0 && current->offset <= 0)
+void link_jumps(Instruction *instructions, int length)
+{
+  for (int i = 0; i < length; i++)
+  {
+    Instruction *current = &instructions[i];
+    // link jumps together
+    current->go = &instructions[current->go_index];
+
+    if (current->ch == '[' && current->go_index == i + 1 && current->shift == 0 && current->offset <= 0)
     {
-      current->linear = -current->d[-current->offset];
+      current->linear = -current->run[-current->offset];
       if (current->linear < 0)
       {
         printf("Warning: infinite loop ");
-        printop(current);
+        print_instruction(current);
         printf("linear=%d\n", current->linear);
         current->linear = 0;
       }
     }
   }
+}
 
-  /*  for (size_t i = 0; i < instruction_array_length; i++)
-   {
-     printop(instruction_array + i);
-   } */
-
-  int memory_size = 1000; /* any number */
+void interpret(Instruction *instructions, int length)
+{
+  int memory_size = 1024;
   int *memory = resize_int_array(0, memory_size, 0);
   int memory_pointer = 0;
 
-  Instruction *current_instruction = instruction_array;
-  instruction_array_end = instruction_array + instruction_array_length;
-
-  // run
-  for (; current_instruction < instruction_array_end; ++current_instruction)
+  for (Instruction *current = &instructions[0]; current < instructions + length; current++)
   {
-    if (current_instruction->c == ']')
+    switch (current->ch)
     {
+    case ']':
       if (memory[memory_pointer] != 0)
-        current_instruction = current_instruction->go;
-    }
-
-    else if (current_instruction->c == '[')
-    {
+        current = current->go;
+      break;
+    case '[':
       if (memory[memory_pointer] == 0)
-        current_instruction = current_instruction->go;
-    }
-
-    else if (current_instruction->c == ',')
-    {
-      memory[memory_pointer] = getchar();
-      continue;
-    }
-
-    else if (current_instruction->c == '.')
-    {
+        current = current->go;
+      break;
+    case '.':
       putchar(memory[memory_pointer]);
-      continue;
+      break;
+    case ',':
+      memory[memory_pointer] = getchar();
+      break;
     }
 
-    /* apply */
-    if (current_instruction->d_length)
+    if (current->run_length)
     {
-      int nmsz = memory_pointer + current_instruction->d_length + current_instruction->offset;
-      if (nmsz > memory_size)
+      int new_memory_size = memory_pointer + current->run_length + current->offset;
+      if (new_memory_size > memory_size)
       {
-        memory = resize_int_array(memory, nmsz, memory_size);
-        memory_size = nmsz;
+        memory = resize_int_array(memory, new_memory_size, memory_size);
+        memory_size = new_memory_size;
       }
 
-      if (current_instruction->linear)
+      if (current->linear)
       {
-        int del = 0;
+        // compute how many iteration we have to do
+        int factor = memory[memory_pointer] / current->linear;
+        int is_exact = memory[memory_pointer] % current->linear == 0;
 
-        int tmp = memory[memory_pointer];
-
-        while (tmp != 0)
+        if (is_exact)
         {
-          tmp -= current_instruction->linear;
-          del += 1;
+          for (int i = 0; i < current->run_length; i++)
+            memory[memory_pointer + current->offset + i] += factor * current->run[i];
         }
-
-        // int del = memory[memory_pointer] / current_instruction->linear;
-
-        // printf("del=%d\n", del);
-
-        for (int i = 0; i < current_instruction->d_length; i++)
+        else
         {
-          int val = del * current_instruction->d[i];
-          // printf("%d: %d => %d\n", i, current_instruction->d[i], val);
-          memory[memory_pointer + current_instruction->offset + i] += val;
+          while (memory[memory_pointer] != 0)
+            for (int i = 0; i < current->run_length; i++)
+              memory[memory_pointer + current->offset + i] += current->run[i];
         }
       }
       else
       {
-        for (int i = 0; i < current_instruction->d_length; i++)
-          memory[memory_pointer + current_instruction->offset + i] += current_instruction->d[i];
+        for (int i = 0; i < current->run_length; i++)
+          memory[memory_pointer + current->offset + i] += current->run[i];
       }
     }
 
-    if (current_instruction->shift > 0)
+    if (current->shift > 0)
     {
-      int nmsz = memory_pointer + current_instruction->shift + 1;
-      if (nmsz > memory_size)
+      int new_memory_size = memory_pointer + current->shift + 1;
+      if (new_memory_size > memory_size)
       {
-        memory = resize_int_array(memory, nmsz, memory_size);
-        memory_size = nmsz;
+        memory = resize_int_array(memory, new_memory_size, memory_size);
+        memory_size = new_memory_size;
       }
     }
-    memory_pointer += current_instruction->shift;
+
+    memory_pointer += current->shift;
   }
+}
+
+int main()
+{
+  Instruction *instructions = 0;
+
+  int instructions_length = load_instructions(&instructions);
+
+  link_jumps(instructions, instructions_length);
+
+  interpret(instructions, instructions_length);
+
   return 0;
 }
