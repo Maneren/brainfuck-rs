@@ -7,7 +7,8 @@
 #![feature(stmt_expr_attributes)]
 #![feature(mixed_integer_ops)]
 // credits:
-//   fade - base idea and code
+//   FADEOffical - idea and base code
+//   bff4 - inspiration for optimizations
 
 mod instructions;
 mod interpret;
