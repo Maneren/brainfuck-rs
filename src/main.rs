@@ -30,10 +30,14 @@ use crate::interpret::interpret;
 #[derive(Parser)]
 #[clap(author, version, about)]
 struct Cli {
-  /// The brainfuck program file. Leave empty to read from stdin.
+  /// Brainfuck program file to interpret
+  ///
+  /// Leave empty to read from stdin.
   file: Option<String>,
 
-  /// Memory size in bytes. Accepts suffixes B, k, M, G. Leave empty for dynamically allocated, starting at 256B.
+  /// Starting memory size in bytes
+  ///
+  /// Accepts suffixes B, k, M, G. Default is 256B.
   #[clap(short, long)]
   memory_size: Option<String>,
 }

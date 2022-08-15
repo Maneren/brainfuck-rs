@@ -30,16 +30,20 @@ Grab a binary from the latest GitHub release
 
 ## Usage
 
-Read from file:
+```txt
+bfrs [OPTIONS] [FILE]
 
-```sh
-bfrs example/mandel.bf
-```
+    <FILE>
+            Brainfuck file to interpret. Leave empty to read from stdin.
 
-or from stdin:
+OPTIONS:
+    -h, --help
+            Print help information
 
-```sh
-cat example/mandel.bf | bfrs
-# or
-bfrs < example/mandel.bf
+    -m, --memory-size <MEMORY_SIZE>
+            Starting memory size in bytes
+            Accepts suffixes B, k, M, G. Default is 256B.
+
+    -V, --version
+            Print version information
 ```
