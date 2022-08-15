@@ -30,7 +30,6 @@ name = "brainfuck"
 version = "1.0.0"
 dependencies = [
  "clap",
- "wrapping_proc_macro",
 ]
 
 [[package]]
@@ -237,14 +236,3 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
-
-[[package]]
-name = "wrapping_proc_macro"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1689c110d0a300b2b0c6f3176a16ecf044deade17e4f65634984b340f32b150a"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]

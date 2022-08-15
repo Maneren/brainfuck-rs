@@ -1,6 +1,7 @@
-use std::io::{Bytes, Read, Write};
-
-use wrapping_proc_macro::wrapping;
+use std::{
+  io::{Bytes, Read, Write},
+  num::Wrapping,
+};
 
 use crate::{instructions::Instruction, memory::Memory};
 
@@ -36,27 +37,7 @@ fn _interpret(
         offset,
         linearity_factor,
         data,
-      } => {
-        let factor = memory.get() / linearity_factor;
-        let is_exact = memory.get() % linearity_factor == 0;
-
-        if is_exact {
-          wrapping! {
-            let ptr = memory.ptr + *offset as usize;
-            memory.check_length(ptr + data.len());
-
-            data
-              .iter()
-              .map(|value| value * factor)
-              .enumerate()
-              .for_each(|(i, value)| {
-                 memory[ptr + i] += value;
-              });
-          }
-        } else {
-          simple_loop(memory, *offset, data, 0);
-        }
-      }
+      } => linear_loop(memory, *linearity_factor, *offset, data),
 
       Instruction::SimpleLoop {
         shift,
@@ -90,44 +71,33 @@ fn _interpret(
 
       Instruction::Shift(amount) => memory.shift(*amount),
 
-      Instruction::ClearRun {
-        shift,
-        offset,
-        data,
-      } => clear_run(memory, *offset, data, *shift),
-
-      Instruction::SimpleClearLoop {
-        shift,
-        offset,
-        data,
-      } => {
-        while memory.get() != 0 {
-          clear_run(memory, *offset, data, *shift);
-        }
-      }
-
       _ => unreachable!("{op:?}"),
     }
   }
 }
 
-fn clear_run(memory: &mut Memory, offset: isize, data: &[bool], shift: isize) {
-  wrapping! {
-    let ptr = memory.ptr + offset as usize;
+fn linear_loop(
+  memory: &mut Memory,
+  linearity_factor: Wrapping<u8>,
+  offset: isize,
+  data: &[Wrapping<u8>],
+) {
+  let factor = memory.get_raw() / linearity_factor;
+  let is_exact = memory.get_raw() % linearity_factor == Wrapping(0);
 
-    memory.check_length(ptr + data.len());
+  if is_exact {
+    let ptr = memory.ptr + Wrapping(offset as usize);
+    memory.check_length(ptr + Wrapping(data.len()));
 
     data.iter().enumerate().for_each(|(i, value)| {
-      if *value {
-        memory[ptr + i] = 0;
-      }
+      memory[ptr + Wrapping(i)] += value * factor;
     });
+  } else {
+    simple_loop(memory, offset, data, 0);
   }
-
-  memory.shift(shift);
 }
 
-fn simple_loop(memory: &mut Memory, offset: isize, data: &[u8], shift: isize) {
+fn simple_loop(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
   while memory.get() != 0 {
     modify_run(memory, offset, data, shift);
   }
@@ -143,16 +113,14 @@ fn read_char(input: &mut Bytes<impl Read>, memory: &mut Memory) {
   memory.set(input);
 }
 
-fn modify_run(memory: &mut Memory, offset: isize, data: &[u8], shift: isize) {
-  wrapping! {
-    let ptr = memory.ptr + offset as usize;
+fn modify_run(memory: &mut Memory, offset: isize, data: &[Wrapping<u8>], shift: isize) {
+  let ptr = memory.ptr + Wrapping(offset as usize);
 
-    memory.check_length(ptr + data.len());
+  memory.check_length(ptr + Wrapping(data.len()));
 
-    data.iter().enumerate().for_each(|(i, value)| {
-      memory[ptr + i] += *value;
-    });
+  data.iter().enumerate().for_each(|(i, value)| {
+    memory[ptr + Wrapping(i)] += value;
+  });
 
-    memory.shift(shift);
-  }
+  memory.shift(shift);
 }

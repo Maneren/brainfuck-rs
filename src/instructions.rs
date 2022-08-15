@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, num::Wrapping};
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum Instruction {
@@ -16,27 +16,17 @@ pub enum Instruction {
   ModifyRun {
     shift: isize,
     offset: isize,
-    data: Vec<u8>,
-  },
-  ClearRun {
-    shift: isize,
-    offset: isize,
-    data: Vec<bool>,
+    data: Vec<Wrapping<u8>>,
   },
   LinearLoop {
     offset: isize,
-    linearity_factor: u8,
-    data: Vec<u8>,
+    linearity_factor: Wrapping<u8>,
+    data: Vec<Wrapping<u8>>,
   },
   SimpleLoop {
     shift: isize,
     offset: isize,
-    data: Vec<u8>,
-  },
-  SimpleClearLoop {
-    shift: isize,
-    offset: isize,
-    data: Vec<bool>,
+    data: Vec<Wrapping<u8>>,
   },
   SearchLoop {
     step: isize,
@@ -67,32 +57,12 @@ impl Debug for Instruction {
         .field("offset", offset)
         .field("data", &format!("{data:?}"))
         .finish(),
-      Self::ClearRun {
-        shift,
-        offset,
-        data,
-      } => f
-        .debug_struct("ClearRun")
-        .field("shift", shift)
-        .field("offset", offset)
-        .field("data", &format!("{data:?}"))
-        .finish(),
       Self::SimpleLoop {
         shift,
         offset,
         data,
       } => f
         .debug_struct("SimpleLoop")
-        .field("shift", shift)
-        .field("offset", offset)
-        .field("data", &format!("{data:?}"))
-        .finish(),
-      Self::SimpleClearLoop {
-        shift,
-        offset,
-        data,
-      } => f
-        .debug_struct("SimpleClearLoop")
         .field("shift", shift)
         .field("offset", offset)
         .field("data", &format!("{data:?}"))

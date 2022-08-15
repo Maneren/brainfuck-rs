@@ -4,8 +4,7 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_possible_wrap)]
 #![feature(is_some_with)]
-#![feature(stmt_expr_attributes)]
-#![feature(mixed_integer_ops)]
+
 // credits:
 //   FADEOffical - idea and base code
 //   bff4 - inspiration for optimizations
