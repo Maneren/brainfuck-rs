@@ -4,12 +4,10 @@
    This interpreter has only one input: program and input to the
    program have to be separated with ! e.g. ",.!a" prints 'a'
    To use it in interactive mode paste your program as input.
-   This program can be compiled with NOLNR macro defined.
-   NOLNR disables optimization of linear loops (where '<>' balanced), e.g. [->+>++<<].
-   Linear loop is then executed in one step.
+
    Oleg Mazonka 4 Dec 2006  http://mazonka.com/
-   Updated by Maneren in 2022
-   */
+   Refactored by Maneren in 2022
+*/
 
 #include <stdlib.h>
 #include <stdio.h>
