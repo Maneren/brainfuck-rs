@@ -1,0 +1,124 @@
+name: Build and upload binaries to release
+
+on:
+  push:
+    tags:
+      - v[0-9].*
+
+jobs:
+  build-and-release:
+    name: Build and release
+    strategy:
+      matrix:
+        job:
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+
+          - target: i686-unknown-linux-gnu
+            os: ubuntu-latest
+
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+
+          - target: aarch64-apple-darwin
+            os: macos-latest
+
+          - target: x86_64-apple-darwin
+            os: macos-latest
+
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+          - target: i686-pc-windows-msvc
+            os: windows-latest
+
+    runs-on: ${{ matrix.job.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install prerequisites
+        shell: bash
+        run: |
+          case ${{ matrix.job.target }} in
+            aarch64-*-linux-*) sudo apt-get -y update ; sudo apt-get -y install binutils-aarch64-linux-gnu ;;
+          esac
+
+      - name: Initialize workflow variables
+        id: vars
+        shell: bash
+        run: |
+          TARGET=${{ matrix.job.target }}
+
+          case $TARGET in
+            *-pc-windows-*) BINARY="bfrs.exe" ;;
+            *)              BINARY="bfrs" ;;
+          esac;
+
+          echo set-output name=BINARY::${BINARY}
+          echo ::set-output name=BINARY::${BINARY}
+
+
+          case $TARGET in
+            x86_64-*) CROSS="false" ;;
+            *)        CROSS="true" ;;
+          esac;
+
+          echo set-output name=CROSS::${CROSS}
+          echo ::set-output name=CROSS::${CROSS}
+
+
+          case $TARGET in
+            *-linux-*) ARCHIVE="bfrs_$TARGET.tar.gz" ;;
+            *)         ARCHIVE="bfrs_$TARGET.zip" ;;
+          esac;
+
+          echo set-output name=ARCHIVE::${ARCHIVE}
+          echo ::set-output name=ARCHIVE::${ARCHIVE}
+
+
+          RELEASE="target/${{ matrix.job.target }}/release"
+
+          echo set-output name=RELEASE::${RELEASE}
+          echo ::set-output name=RELEASE::${RELEASE}
+
+
+          case ${{ matrix.job.target }} in
+            aarch64-*-linux-*) STRIP="aarch64-linux-gnu-strip" ;;
+            *-pc-windows-msvc) STRIP="" ;;
+            *)                 STRIP="strip"
+          esac;
+
+          echo set-output name=STRIP::${STRIP}
+          echo ::set-output name=STRIP::${STRIP}
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          target: ${{ matrix.job.target }}
+          profile: minimal
+          override: true
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ steps.vars.outputs.CROSS }}
+          command: build
+          args: --release --locked --target=${{ matrix.job.target }}
+
+      - name: Strip the binary
+        if: ${{ steps.vars.outputs.STRIP }}
+        run: ${{ steps.vars.outputs.STRIP }} '${{ steps.vars.outputs.RELEASE }}/${{ steps.vars.outputs.BINARY }}'
+
+      - name: Create archive
+        run: |
+          tar caf ${{ steps.vars.outputs.ARCHIVE }} --directory=${{ steps.vars.outputs.RELEASE }} ${{ steps.vars.outputs.BINARY }}
+
+      - name: Upload binary to release
+        uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ steps.vars.outputs.ARCHIVE }}
+          asset_name: ${{ steps.vars.outputs.ARCHIVE }}
+          tag: ${{ github.ref }}

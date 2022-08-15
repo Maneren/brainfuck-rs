@@ -10,3 +10,7 @@ wrapping_proc_macro = "1.0.0"
 [profile.release]
 codegen-units=1
 lto="fat"
+
+[[bin]]
+name = "bfrs"
+path = "src/main.rs"
