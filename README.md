@@ -15,15 +15,17 @@ Very fast optimizing brainfuck intepreter written in Rust
 
 Compile code with cargo (get from [rustup](https://rustup.rs)):
 
+#### *Note: requires nightly toolchain: `rustup toolchain install nightly`*
+
 ```sh
-cargo build --release
+cargo +nightly build --release
 ```
 
-The binary is in `target/release/`
+The binary is then in `target/release/`
 
 ### From release
 
-Grab a binary from the latest release
+Grab a binary from the latest GitHub release
 
 ## Usage
 
