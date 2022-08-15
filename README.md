@@ -5,9 +5,10 @@ Very fast optimizing brainfuck intepreter written in Rust
 ## Features
 
 - constant folding
-- running multiple simple instructions at once
+- run-length encoding
 - optimizing away loops with balanced `<`s and `>`s
 - optimizing unnested loops
+- optimizing common idioms - eg. clear loops (`[-]`)
 
 ## Install
 
