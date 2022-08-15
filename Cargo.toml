@@ -1,10 +1,10 @@
 [package]
 name = "brainfuck"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 [dependencies]
-clap = { version = "3.2.16", features = ["derive"] }
+clap = { version = "3.2.17", features = ["derive"] }
 wrapping_proc_macro = "1.0.0"
 
 [profile.release]
