@@ -22,7 +22,6 @@ use std::{
 };
 
 use clap::Parser;
-use instructions::Instruction;
 use optimizations::optimize;
 
 use crate::interpret::interpret;
@@ -42,16 +41,6 @@ struct Cli {
   memory_size: Option<String>,
 }
 
-macro_rules! measure_time {
-  ($b:block) => {{
-    let start = Instant::now();
-    $b;
-    let elapsed = start.elapsed();
-
-    elapsed
-  }};
-}
-
 fn main() {
   let args = Cli::parse();
 
@@ -61,25 +50,26 @@ fn main() {
     stdin()
       .bytes()
       .take_while(|b| b.is_ok_and(|&b| b != b'|'))
-      .map(Result::unwrap)
+      .map(|ch| ch.expect("Error reading from stdin"))
       .map(char::from)
       .collect()
   };
 
   let memory_size = parse_memory_size(args.memory_size);
 
-  let executed = measure_time!({
-    let instructions = generate_instructions(&program);
+  let elapsed = {
+    let start = Instant::now();
+
+    let instructions = parser::parse(&program);
+    let instructions = optimize(&instructions);
 
     interpret(&instructions, stdin(), stdout(), memory_size);
-  });
+
+    start.elapsed()
+  };
 
   println!();
-  println!("Executed in {executed:?}");
-}
-
-fn generate_instructions(source: &str) -> Vec<Instruction> {
-  optimize(&parser::parse(source))
+  println!("Executed in {elapsed:?}");
 }
 
 fn parse_memory_size(memory_size: Option<String>) -> usize {
