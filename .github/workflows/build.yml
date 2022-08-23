@@ -33,8 +33,6 @@ jobs:
             os: windows-latest
 
     runs-on: ${{ matrix.job.os }}
-    env:
-      binary: ${{ contains(matrix.job.target) }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -43,7 +41,7 @@ jobs:
         shell: bash
         run: |
           case ${{ matrix.job.target }} in
-            aarch64-*-linux-*) sudo apt-get -y update ; sudo apt-get -y install binutils-aarch64-linux-gnu ;;
+          aarch64-*-linux-*) sudo apt-get -y update ; sudo apt-get -y install binutils-aarch64-linux-gnu ;;
           esac
 
       - name: Initialize workflow variables
@@ -53,8 +51,8 @@ jobs:
           TARGET=${{ matrix.job.target }}
 
           case ${TARGET} in
-            *-pc-windows-*) BINARY="bfrs.exe" ;;
-            *)              BINARY="bfrs" ;;
+          *-pc-windows-*) BINARY="bfrs.exe" ;;
+          *)              BINARY="bfrs" ;;
           esac;
 
           echo set-output name=BINARY::${BINARY}
@@ -62,8 +60,8 @@ jobs:
 
 
           case ${TARGET} in
-            *-linux-*) ARCHIVE="bfrs_${TARGET}.tar.gz" ;;
-            *)         ARCHIVE="bfrs_${TARGET}.zip" ;;
+          *-linux-*) ARCHIVE="bfrs_${TARGET}.tar.gz" ;;
+          *)         ARCHIVE="bfrs_${TARGET}.zip" ;;
           esac;
 
           echo set-output name=ARCHIVE::${ARCHIVE}
@@ -77,9 +75,9 @@ jobs:
 
 
           case ${TARGET} in
-            aarch64-*-linux-*) STRIP="aarch64-linux-gnu-strip" ;;
-            *-pc-windows-msvc) STRIP="" ;;
-            *)                 STRIP="strip"
+          aarch64-*-linux-*) STRIP="aarch64-linux-gnu-strip" ;;
+          *-pc-windows-msvc) STRIP="" ;;
+          *)                 STRIP="strip"
           esac;
 
           echo set-output name=STRIP::${STRIP}
@@ -96,7 +94,7 @@ jobs:
       - name: Build
         uses: actions-rs/cargo@v1
         with:
-          use-cross: ${{ !contains(matrix.job.target, "x86_64") }}
+          use-cross: ${{ !contains(matrix.job.target, 'x86_64') }}
           command: build
           args: --release --locked --target=${{ matrix.job.target }}
 
