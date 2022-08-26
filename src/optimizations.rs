@@ -54,50 +54,48 @@ fn collect_loops(input: &[Instruction]) -> Vec<Instruction> {
 }
 
 fn optimize_small_loops(source: Vec<Instruction>) -> Vec<Instruction> {
-  let mut result = Vec::with_capacity(source.len());
-  let mut push = |val| result.push(val);
+  source
+    .into_iter()
+    .filter_map(|op| {
+      match op {
+        Loop(instructions) => match &instructions[..] {
+          [] => None,
 
-  for op in source {
-    match op {
-      Loop(instructions) => match &instructions[..] {
-        [] => {}
+          [ModifyRun {
+            shift: 0,
+            offset: 0,
+            data,
+          }] if data.len() == 1 => Some(Clear),
 
-        [ModifyRun {
-          shift: 0,
-          offset: 0,
-          data,
-        }] if data.len() == 1 => push(Clear),
+          [Shift(amount)] => Some(SearchLoop { step: *amount }),
 
-        [Shift(amount)] => push(SearchLoop { step: *amount }),
+          [ModifyRun {
+            shift,
+            offset,
+            data,
+          }] if *shift == 0 && *offset <= 0 => Some(LinearLoop {
+            offset: *offset,
+            linearity_factor: -data[(-offset) as usize], // value at offset 0
+            data: data.clone(),
+          }),
 
-        [ModifyRun {
-          shift,
-          offset,
-          data,
-        }] if *shift == 0 && *offset <= 0 => push(LinearLoop {
-          offset: *offset,
-          linearity_factor: -data[(-offset) as usize], // value at offset 0
-          data: data.clone(),
-        }),
+          [ModifyRun {
+            shift,
+            offset,
+            data,
+          }] => Some(SimpleLoop {
+            shift: *shift,
+            offset: *offset,
+            data: data.clone(),
+          }),
 
-        [ModifyRun {
-          shift,
-          offset,
-          data,
-        }] => push(SimpleLoop {
-          shift: *shift,
-          offset: *offset,
-          data: data.clone(),
-        }),
+          _ => Some(Loop(optimize_small_loops(instructions))),
+        },
 
-        _ => push(Loop(optimize_small_loops(instructions))),
-      },
-
-      _ => push(op),
-    }
-  }
-
-  result
+        _ => Some(op),
+      }
+    })
+    .collect()
 }
 
 fn compress_modify_runs(source: &[Instruction]) -> Vec<Instruction> {
@@ -164,9 +162,11 @@ fn compress_modify_runs(source: &[Instruction]) -> Vec<Instruction> {
           });
         }
       }
+
       Loop(instructions) => {
         result.push(Loop(compress_modify_runs(instructions)));
       }
+
       _ => result.push(current.clone()),
     }
 

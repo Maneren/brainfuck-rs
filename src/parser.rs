@@ -1,27 +1,20 @@
 use crate::instructions::Instruction;
 
 pub fn parse(string: &str) -> Vec<Instruction> {
-  let mut parsed = Vec::new();
-
-  for ch in string.chars() {
-    let op = match ch {
-      '+' => Instruction::Increment,
-      '-' => Instruction::Decrement,
-      '>' => Instruction::Right,
-      '<' => Instruction::Left,
-      '.' => Instruction::Print,
-      ',' => Instruction::Read,
-      '[' => Instruction::BlockStart,
-      ']' => Instruction::BlockEnd,
-      _ => {
-        continue;
-      }
-    };
-
-    parsed.push(op);
-  }
-
-  parsed
+  string
+    .chars()
+    .filter_map(|ch| match ch {
+      '+' => Some(Instruction::Increment),
+      '-' => Some(Instruction::Decrement),
+      '>' => Some(Instruction::Right),
+      '<' => Some(Instruction::Left),
+      '.' => Some(Instruction::Print),
+      ',' => Some(Instruction::Read),
+      '[' => Some(Instruction::BlockStart),
+      ']' => Some(Instruction::BlockEnd),
+      _ => None,
+    })
+    .collect()
 }
 
 #[cfg(test)]
