@@ -110,8 +110,8 @@ fn compress_modify_runs(source: &[Instruction]) -> Vec<Instruction> {
         let mut offset = 0;
         let mut data = VecDeque::from([Wrapping(0)]);
 
-        while i < source.len() {
-          match &source[i] {
+        while let Some(op) = source.get(i) {
+          match op {
             Increment => data[memory_pointer] += 1,
             Decrement => data[memory_pointer] -= 1,
             Right => {
@@ -120,15 +120,16 @@ fn compress_modify_runs(source: &[Instruction]) -> Vec<Instruction> {
                 data.push_back(Wrapping(0));
               }
             }
+
             Left => {
               if memory_pointer > 0 {
                 memory_pointer -= 1;
               } else {
                 offset -= 1;
-
                 data.push_front(Wrapping(0));
               }
             }
+
             _ => {
               i -= 1;
               break;
