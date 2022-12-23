@@ -3,7 +3,6 @@
 #![allow(clippy::cast_sign_loss)]
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_possible_wrap)]
-#![feature(is_some_with)]
 
 // credits:
 //   FADEOffical - idea and base code
@@ -49,7 +48,11 @@ fn main() {
   } else {
     stdin()
       .bytes()
-      .take_while(|b| b.is_ok_and(|&b| b != b'|'))
+      .take_while(|b| match b {
+        Ok(b'b') => false,
+        Ok(..) => true,
+        _ => false,
+      })
       .map(|ch| ch.expect("Error reading from stdin"))
       .map(char::from)
       .collect()
