@@ -18,17 +18,14 @@ impl Memory {
     }
   }
 
-  #[inline]
   pub fn get(&self) -> u8 {
     self.get_raw().0
   }
 
-  #[inline]
   pub fn get_raw(&self) -> Wrapping<u8> {
     self.data[self.ptr.0]
   }
 
-  #[inline]
   pub fn set(&mut self, value: u8) {
     self.data[self.ptr.0] = Wrapping(value);
   }
@@ -49,14 +46,12 @@ impl Memory {
 impl Index<usize> for Memory {
   type Output = Wrapping<u8>;
 
-  #[inline]
   fn index(&self, index: usize) -> &Self::Output {
     &self.data[index]
   }
 }
 
 impl IndexMut<usize> for Memory {
-  #[inline]
   fn index_mut(&mut self, index: usize) -> &mut Self::Output {
     &mut self.data[index]
   }
@@ -65,14 +60,12 @@ impl IndexMut<usize> for Memory {
 impl Index<Wrapping<usize>> for Memory {
   type Output = Wrapping<u8>;
 
-  #[inline]
   fn index(&self, index: Wrapping<usize>) -> &Self::Output {
     &self[index.0]
   }
 }
 
 impl IndexMut<Wrapping<usize>> for Memory {
-  #[inline]
   fn index_mut(&mut self, index: Wrapping<usize>) -> &mut Self::Output {
     &mut self[index.0]
   }
