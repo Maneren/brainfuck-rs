@@ -160,7 +160,7 @@ int find_matching_opening(Instruction *instructions, int length)
   int opening_index = length;
 
   // find matching opening bracket
-  while (depth && opening_index-- > 0)
+  while (depth && opening_index--)
   {
     int ch = instructions[opening_index].ch;
     depth += (ch == ']') - (ch == '[');
