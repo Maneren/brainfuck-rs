@@ -1,4 +1,4 @@
-use std::io::{stdin, Read, stdout, Write};
+use std::io::{stdin, stdout, Read, Write};
 
 #[derive(Debug, PartialEq, Eq)]
 struct Instruction {
@@ -43,7 +43,7 @@ fn putchar(c: i32) {
 }
 
 fn offset_ptr<T>(ptr: *const T, index: usize) -> *const T {
-  unsafe { (ptr as *const T).add(index) }
+  unsafe { ptr.add(index) }
 }
 
 fn load_next_char() -> Option<char> {
@@ -68,11 +68,14 @@ fn consume(instruction: &mut Instruction) -> Option<char> {
   instruction.run = vec![0];
   instruction.offset = 0;
 
-  while let Some(char) = current_char && !strchr("!,.[]", char){
+  while let Some(char) = current_char {
+    if strchr("!,.[]", char) {
+      break;
+    }
+
     match char {
       '+' => instruction.run[memory_pointer] += 1,
       '-' => instruction.run[memory_pointer] -= 1,
-      
       '>' => {
         memory_pointer += 1;
 
@@ -80,7 +83,6 @@ fn consume(instruction: &mut Instruction) -> Option<char> {
           instruction.run.push(0)
         }
       }
-
       '<' => {
         if memory_pointer > 0 {
           memory_pointer -= 1;
@@ -111,7 +113,7 @@ fn consume(instruction: &mut Instruction) -> Option<char> {
   current_char
 }
 
-fn find_matching_opening(instructions: &mut Vec<Instruction>) -> usize {
+fn find_matching_opening(instructions: &[Instruction]) -> usize {
   let mut depth = 1;
   let mut opening_index = instructions.len() - 1;
 
@@ -139,10 +141,12 @@ fn load_instructions() -> Vec<Instruction> {
 
   let mut current_char = load_next_char();
 
-  while let Some(char) = current_char && !strchr("!", char) {
+  while let Some(char) = current_char {
+    if strchr("!", char) {
+      break;
+    }
 
     let mut current = Instruction::new(char);
-
 
     if strchr(",.", char) {
       // don't do anything special
@@ -152,12 +156,11 @@ fn load_instructions() -> Vec<Instruction> {
     }
 
     if char == ']' {
-      let opening_index = find_matching_opening(&mut instructions);
+      let opening_index = find_matching_opening(&instructions);
 
       current.go_index = opening_index;
       instructions[opening_index].go_index = instructions.len();
     }
-
 
     current_char = consume(&mut current);
 
@@ -187,9 +190,9 @@ fn link_jumps(instructions: &mut [Instruction]) {
         std::cmp::Ordering::Less => {
           println!("Warning: infinite loop");
           println!("{:?}", instruction);
-          
+
           instruction.linear = false;
-        },
+        }
         std::cmp::Ordering::Equal => instruction.linear = false,
         std::cmp::Ordering::Greater => instruction.linear = true,
       }
@@ -204,7 +207,7 @@ fn interpret(instructions: Vec<Instruction>) {
   let mut current_ptr = instructions.as_ptr();
   let mut current = unsafe { &*current_ptr };
   let end = offset_ptr(current_ptr, instructions.len());
-  
+
   while current_ptr < end {
     match current.char {
       ']' => {
